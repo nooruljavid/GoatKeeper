@@ -3,11 +3,15 @@ package com.goatkeeper.app.data
 import android.content.Context
 import androidx.room.Dao
 import androidx.room.Database
+import androidx.room.Delete
 import androidx.room.Entity
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "goats")
@@ -31,18 +35,18 @@ data class Goat(
 data class FarmRecord(
     @PrimaryKey(autoGenerate = true) val recordId: Long = 0,
     val goatId: String = "",
-    val type: String, // Health, Breeding, Insurance, Sale, Transfer
+    val type: String,
     val date: String,
-    val dueDate: String = "", // Next due, Expiry, or Expected Kidding
-    val title: String, // Description, Policy #, or Breed Type
-    val details: String = "", // Notes, Condition, etc.
-    val amount: Double? = null, // Cost, Price, Premium, Coverage
+    val dueDate: String = "",
+    val title: String,
+    val details: String = "",
+    val amount: Double? = null,
     val quantity: Double? = null,
     val unit: String = "",
-    val party: String = "", // Vet, Buyer, Insurer
+    val party: String = "",
     val paymentStatus: String = "",
-    val sireId: String = "", // For breeding
-    val actualDate: String = "", // For actual kidding date
+    val sireId: String = "",
+    val actualDate: String = "",
     val kidsCount: Int? = null,
     val kidsAlive: Int? = null
 )
@@ -54,9 +58,24 @@ interface FarmDao {
     @Query("SELECT * FROM farm_records ORDER BY date DESC") fun records(): Flow<List<FarmRecord>>
     @Query("SELECT * FROM farm_records WHERE goatId = :goatId ORDER BY date DESC") fun recordsFor(goatId: String): Flow<List<FarmRecord>>
     @Query("SELECT * FROM farm_records WHERE dueDate != '' ORDER BY dueDate") fun dueRecords(): Flow<List<FarmRecord>>
-    @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE) suspend fun saveGoat(goat: Goat): Unit
-    @androidx.room.Insert suspend fun saveRecord(record: FarmRecord): Unit
-    @androidx.room.Delete suspend fun deleteGoat(goat: Goat): Unit
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveGoat(goat: Goat)
+
+    @Update
+    suspend fun updateGoat(goat: Goat)
+
+    @Query("UPDATE goats SET status = :status WHERE id = :goatId")
+    suspend fun updateGoatStatus(goatId: String, status: String)
+
+    @Insert
+    suspend fun saveRecord(record: FarmRecord)
+
+    @Update
+    suspend fun updateRecord(record: FarmRecord)
+
+    @Delete
+    suspend fun deleteGoat(goat: Goat)
 }
 
 @Database(entities = [Goat::class, FarmRecord::class], version = 2, exportSchema = false)
