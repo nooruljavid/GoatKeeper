@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "39674470741",
+    "project_id": "goat-keeper-df750",
+    "storage_bucket": "goat-keeper-df750.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:39674470741:android:32c032e2a8a58ed8500fdc",
+        "android_client_info": {
+          "package_name": "com.goatkeeper.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "39674470741-ep6r45m6k8jjtkiia2a5lpacq56jqlbn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.goatkeeper.app",
+            "certificate_hash": "7dfc891195fe1595c0f8bbe397079a5cb882d1c2"
+          }
+        },
+        {
+          "client_id": "39674470741-uj8j4igkp4sgsr3cbh346pptu5td2214.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtOcLz-Y6ASz_cVrOnXaGxDVp3Rnpw8Gk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "39674470741-uj8j4igkp4sgsr3cbh346pptu5td2214.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -16,11 +16,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "goats")
 data class Goat(
-    @PrimaryKey val id: String,
+    @PrimaryKey val id: String = "",
     val name: String = "",
-    val breed: String,
-    val dateOfBirth: String,
-    val gender: String,
+    val breed: String = "",
+    val dateOfBirth: String = "",
+    val gender: String = "",
     val status: String = "Active",
     val damId: String = "",
     val sireId: String = "",
@@ -35,10 +35,10 @@ data class Goat(
 data class FarmRecord(
     @PrimaryKey(autoGenerate = true) val recordId: Long = 0,
     val goatId: String = "",
-    val type: String,
-    val date: String,
+    val type: String = "",
+    val date: String = "",
     val dueDate: String = "",
-    val title: String,
+    val title: String = "",
     val details: String = "",
     val amount: Double? = null,
     val quantity: Double? = null,
@@ -79,6 +79,12 @@ interface FarmDao {
 
     @Delete
     suspend fun deleteRecord(record: FarmRecord)
+
+    @Query("DELETE FROM goats")
+    suspend fun clearGoats()
+
+    @Query("DELETE FROM farm_records")
+    suspend fun clearRecords()
 }
 
 @Database(entities = [Goat::class, FarmRecord::class], version = 2, exportSchema = false)

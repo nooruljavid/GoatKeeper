@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,19 +21,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import coil.compose.AsyncImage
-import com.goatkeeper.app.data.FarmDao
-import com.goatkeeper.app.data.FarmRecord
-import com.goatkeeper.app.data.Goat
+import com.goatkeeper.app.data.*
+import com.goatkeeper.app.ui.LoginScreen
 import com.goatkeeper.app.ui.components.*
-import com.goatkeeper.app.util.age
-import com.goatkeeper.app.util.formatDate
-import com.goatkeeper.app.util.isKid
-import com.goatkeeper.app.util.kiddingDate
+import com.goatkeeper.app.util.*
 import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
@@ -43,9 +43,64 @@ private val nextWeek get() = LocalDate.now().plusDays(7).toString()
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
+    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+    var user by remember { mutableStateOf(auth.currentUser) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    
+    val syncManager = remember(dao) { SyncManager(dao) }
+
+    if (user == null) {
+        LoginScreen { newUser ->
+            user = newUser
+            syncManager.downloadFromCloud()
+        }
+    } else {
+        MainAppContent(dao, share, syncManager, user!!) {
+            scope.launch {
+                // 1. Sign out from Firebase
+                auth.signOut()
+                
+                // 2. Sign out from Google to force account selection next time
+                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken("39674470741-uj8j4igkp4sgsr3cbh346pptu5td2214.apps.googleusercontent.com")
+                    .requestEmail()
+                    .build()
+                GoogleSignIn.getClient(context, gso).signOut()
+                
+                // 3. Clear local data to ensure privacy for the next user
+                dao.clearGoats()
+                dao.clearRecords()
+                
+                // 4. Update UI state
+                user = null
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun MainAppContent(
+    dao: FarmDao,
+    share: (String, String) -> Unit,
+    syncManager: SyncManager,
+    user: com.google.firebase.auth.FirebaseUser,
+    onSignOut: () -> Unit
+) {
     val goats by dao.goats().collectAsState(initial = emptyList())
     val records by dao.records().collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val calendarManager = remember { CalendarManager(context) }
+
+    val calendarPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            // Optional: Show a toast or feedback
+        }
+    }
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var selectedGoat by rememberSaveable { mutableStateOf<String?>(null) }
@@ -54,6 +109,7 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
     var addRecordType by remember { mutableStateOf<String?>(null) }
     var recordGoatId by remember { mutableStateOf<String?>(null) }
     var editRecord by remember { mutableStateOf<FarmRecord?>(null) }
+    var showAccountMenu by remember { mutableStateOf(false) }
 
     fun openAddRecord(type: String, goatId: String? = null) {
         addRecordType = type
@@ -67,6 +123,13 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
                 "Sale" -> dao.updateGoatStatus(record.goatId, "Sold")
                 "Transfer" -> dao.updateGoatStatus(record.goatId, "Transferred")
             }
+            syncManager.uploadToCloud()
+            
+            // Sync with Google Calendar if a due date is set
+            if (record.dueDate.isNotBlank()) {
+                val goatName = goats.find { it.id == record.goatId }?.name?.ifBlank { record.goatId } ?: record.goatId
+                calendarManager.addReminder(record, goatName)
+            }
         }
         addRecordType = null
         recordGoatId = null
@@ -76,6 +139,7 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
     fun deleteRecord(record: FarmRecord) {
         scope.launch {
             dao.deleteRecord(record)
+            syncManager.deleteRecordFromCloud(record.recordId)
         }
         editRecord = null
     }
@@ -83,9 +147,14 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
     fun deleteGoat(goat: Goat) {
         scope.launch {
             dao.deleteGoat(goat)
+            syncManager.deleteGoatFromCloud(goat.id)
         }
         selectedGoat = null
         editGoat = null
+    }
+
+    LaunchedEffect(Unit) {
+        calendarPermissionLauncher.launch(android.Manifest.permission.WRITE_CALENDAR)
     }
 
     Scaffold(
@@ -101,6 +170,53 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
                     if (selectedGoat != null) {
                         IconButton(onClick = { selectedGoat = null }) {
                             Icon(Icons.Default.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    }
+                },
+                actions = {
+                    if (selectedGoat == null) {
+                        Box {
+                            IconButton(onClick = { showAccountMenu = true }) {
+                                if (user.photoUrl != null) {
+                                    AsyncImage(
+                                        model = user.photoUrl,
+                                        contentDescription = "Profile",
+                                        modifier = Modifier.size(32.dp).clip(RoundedCornerShape(16.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(Icons.Default.AccountCircle, "Account", tint = MaterialTheme.colorScheme.onPrimary)
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = showAccountMenu,
+                                onDismissRequest = { showAccountMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text("Signed in as:", style = MaterialTheme.typography.labelSmall)
+                                            Text(user.email ?: "Unknown User", fontWeight = FontWeight.Bold)
+                                        }
+                                    },
+                                    onClick = { },
+                                    enabled = false
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.AutoMirrored.Filled.Logout, null, modifier = Modifier.size(20.dp))
+                                            Spacer(Modifier.width(12.dp))
+                                            Text("Sign Out")
+                                        }
+                                    },
+                                    onClick = {
+                                        showAccountMenu = false
+                                        onSignOut()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -165,7 +281,10 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
             existing = null,
             onDismiss = { addGoat = false },
             onSave = {
-                scope.launch { dao.saveGoat(it) }
+                scope.launch { 
+                    dao.saveGoat(it)
+                    syncManager.uploadToCloud()
+                }
                 addGoat = false
             }
         )
@@ -176,7 +295,10 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
             existing = goat,
             onDismiss = { editGoat = null },
             onSave = {
-                scope.launch { dao.updateGoat(it) }
+                scope.launch { 
+                    dao.updateGoat(it)
+                    syncManager.uploadToCloud()
+                }
                 editGoat = null
             },
             onDelete = { deleteGoat(it) }
