@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.goatkeeper.app.data.FarmRecord
+import com.goatkeeper.app.util.formatDate
 
 @Composable
 fun RecordItem(
@@ -59,7 +60,7 @@ fun RecordItem(
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        text = record.date,
+                        text = formatDate(record.date),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -84,7 +85,7 @@ fun RecordItem(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Due: ${record.dueDate}",
+                            text = "Due: ${formatDate(record.dueDate)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.error
                         )

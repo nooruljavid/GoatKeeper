@@ -11,6 +11,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.goatkeeper.app.util.formatDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,7 +31,7 @@ fun DatePickerField(
     )
 
     OutlinedTextField(
-        value = value,
+        value = formatDate(value),
         onValueChange = { },
         label = { Text(label) },
         readOnly = true,

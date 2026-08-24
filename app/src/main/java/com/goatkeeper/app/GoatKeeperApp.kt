@@ -1,11 +1,15 @@
 package com.goatkeeper.app
-
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,24 +17,30 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
 import com.goatkeeper.app.data.FarmDao
 import com.goatkeeper.app.data.FarmRecord
 import com.goatkeeper.app.data.Goat
 import com.goatkeeper.app.ui.components.*
 import com.goatkeeper.app.util.age
+import com.goatkeeper.app.util.formatDate
 import com.goatkeeper.app.util.isKid
 import com.goatkeeper.app.util.kiddingDate
 import kotlinx.coroutines.launch
+import java.io.File
 import java.time.LocalDate
 
 private val today get() = LocalDate.now().toString()
 private val nextWeek get() = LocalDate.now().plusDays(7).toString()
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
     val goats by dao.goats().collectAsState(initial = emptyList())
@@ -289,12 +299,22 @@ private fun GoatCard(goat: Goat, open: (String) -> Unit) = Card(
 ) {
     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            modifier = Modifier.size(48.dp).background(
-                if (goat.gender == "Female") Color(0xFFD1FAE5) else Color(0xFFDBEAFE),
-                RoundedCornerShape(24.dp)
+            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)).background(
+                if (goat.gender == "Female") Color(0xFFD1FAE5) else Color(0xFFDBEAFE)
             ),
             contentAlignment = Alignment.Center
-        ) { Text("🐐", fontSize = 24.sp) }
+        ) {
+            if (goat.photoUri.isNotBlank()) {
+                AsyncImage(
+                    model = goat.photoUri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Text("🐐", fontSize = 24.sp)
+            }
+        }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(if (goat.name.isBlank()) goat.id else "${goat.name} · ${goat.id}", fontWeight = FontWeight.Bold)
@@ -382,6 +402,21 @@ private fun GoatInfoTab(
 ) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         goat?.let { g ->
+            if (g.photoUri.isNotBlank()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        AsyncImage(
+                            model = g.photoUri,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
             item {
                 Card(elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                     Column(Modifier.padding(16.dp).fillMaxWidth()) {
@@ -390,7 +425,7 @@ private fun GoatInfoTab(
                         InfoRow("Breed", g.breed)
                         InfoRow("Gender", g.gender)
                         InfoRow("Age", age(g.dateOfBirth))
-                        InfoRow("Born", g.dateOfBirth)
+                        InfoRow("Born", formatDate(g.dateOfBirth))
                         InfoRow("Status", g.status)
                         if (g.damId.isNotBlank()) InfoRow("Dam", allGoats.find { it.id == g.damId }?.let { if (it.name.isBlank()) it.id else it.name } ?: g.damId)
                         if (g.sireId.isNotBlank()) InfoRow("Sire", allGoats.find { it.id == g.sireId }?.let { if (it.name.isBlank()) it.id else it.name } ?: g.sireId)
@@ -476,7 +511,7 @@ private fun Reports(goats: List<Goat>, records: List<FarmRecord>, share: (String
     val revenue = sales.sumOf { it.amount ?: 0.0 }
     val report = buildString {
         appendLine("GOATKEEPER HERD REPORT")
-        appendLine("Generated: $today")
+        appendLine("Generated: ${formatDate(today)}")
         appendLine("Total goats: ${goats.size}")
         appendLine("Active goats: ${goats.count { it.status == "Active" }}")
         appendLine("Health records: ${records.count { it.type == "Health" }}")
@@ -491,7 +526,7 @@ private fun Reports(goats: List<Goat>, records: List<FarmRecord>, share: (String
         Button(onClick = { share("GoatKeeper Herd Report", report) }, Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Share, null); Spacer(Modifier.width(8.dp)); Text("Share Herd Summary")
         }
-        OutlinedButton(onClick = { share("GoatKeeper Financial Report", sales.joinToString("\n") { "${it.date}, ${it.title}, ${it.party}, ${it.amount}, ${it.paymentStatus}" }) }, Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = { share("GoatKeeper Financial Report", sales.joinToString("\n") { "${formatDate(it.date)}, ${it.title}, ${it.party}, ${it.amount}, ${it.paymentStatus}" }) }, Modifier.fillMaxWidth()) {
             Text("Share Sales CSV")
         }
         Text("Tip: choose a spreadsheet app from the share sheet to open the sales CSV.", style = MaterialTheme.typography.bodySmall)
@@ -519,34 +554,135 @@ private fun GoatDialog(
     var color by remember(existing?.id) { mutableStateOf(existing?.colorMarkings ?: "") }
     var microchip by remember(existing?.id) { mutableStateOf(existing?.microchipId ?: "") }
     var notes by remember(existing?.id) { mutableStateOf(existing?.notes ?: "") }
+    var photoUri by remember(existing?.id) { mutableStateOf(existing?.photoUri ?: "") }
+    var showPhotoOptions by remember { mutableStateOf(false) }
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var tempCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> if (uri != null) photoUri = uri.toString() }
+    )
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { success ->
+            if (success && tempCameraUri != null) {
+                photoUri = tempCameraUri.toString()
+            }
+        }
+    )
+
+    fun takePhoto() {
+        val file = File(context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES), "goat_${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(context, "com.goatkeeper.app.fileprovider", file)
+        tempCameraUri = uri
+        cameraLauncher.launch(uri)
+    }
+
+    if (showPhotoOptions) {
+        AlertDialog(
+            onDismissRequest = { showPhotoOptions = false },
+            title = { Text("Goat Photo") },
+            text = { Text("Choose a photo source for your goat.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPhotoOptions = false
+                    takePhoto()
+                }) {
+                    Icon(Icons.Default.CameraAlt, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Camera")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPhotoOptions = false
+                    photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }) {
+                    Icon(Icons.Default.PhotoLibrary, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Gallery")
+                }
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (existing == null) "Register Goat" else "Edit Goat", fontWeight = FontWeight.Bold) },
         text = {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item {
-                    Field("Goat ID *", id, change = { id = it })
-                    Field("Name", name, change = { name = it })
-                    Field("Breed *", breed, change = { breed = it })
-                    DatePickerField("Date of Birth *", dob, { dob = it }, Modifier.padding(top = 8.dp))
-                    Text("Gender", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { showPhotoOptions = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (photoUri.isBlank()) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.AddAPhoto, null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Add Photo", style = MaterialTheme.typography.labelMedium)
+                        }
+                    } else {
+                        AsyncImage(
+                            model = photoUri,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        Surface(
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                        ) {
+                            Icon(Icons.Default.Edit, null, modifier = Modifier.padding(4.dp).size(16.dp), tint = Color.White)
+                        }
+                    }
+                }
+                
+                Field("Goat ID *", id, change = { id = it })
+                Field("Name", name, change = { name = it })
+                Field("Breed *", breed, change = { breed = it })
+                DatePickerField("Date of Birth *", dob, { dob = it })
+                
+                Column {
+                    Text("Gender", style = MaterialTheme.typography.labelMedium)
+                    Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(selected = gender == "Female", onClick = { gender = "Female" }, label = { Text("♀ Female") }, modifier = Modifier.weight(1f))
                         FilterChip(selected = gender == "Male", onClick = { gender = "Male" }, label = { Text("♂ Male") }, modifier = Modifier.weight(1f))
                     }
-                    Text("Status", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                }
+                
+                Column {
+                    Text("Status", style = MaterialTheme.typography.labelMedium)
+                    @OptIn(ExperimentalLayoutApi::class)
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
                         listOf("Active", "Sold", "Deceased", "Transferred").forEach { value ->
                             FilterChip(selected = status == value, onClick = { status = value }, label = { Text(value) })
                         }
                     }
-                    Field("Dam ID", dam, change = { dam = it })
-                    Field("Sire ID", sire, change = { sire = it })
-                    Field("Color / Markings", color, change = { color = it })
-                    Field("Microchip ID", microchip, change = { microchip = it })
-                    OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth().height(100.dp))
                 }
+                
+                Field("Dam ID", dam, change = { dam = it })
+                Field("Sire ID", sire, change = { sire = it })
+                Field("Color / Markings", color, change = { color = it })
+                Field("Microchip ID", microchip, change = { microchip = it })
+                OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth().height(100.dp))
             }
         },
         confirmButton = {
@@ -578,7 +714,7 @@ private fun GoatDialog(
                             status = status,
                             damId = dam.trim(),
                             sireId = sire.trim(),
-                            photoUri = existing?.photoUri ?: "",
+                            photoUri = photoUri,
                             colorMarkings = color.trim(),
                             microchipId = microchip.trim(),
                             notes = notes.trim()
@@ -617,82 +753,115 @@ private fun RecordDialog(
     var kidsAlive by remember(existing?.recordId) { mutableStateOf(existing?.kidsAlive?.toString() ?: "") }
     var showGoatMenu by remember { mutableStateOf(false) }
 
+    LaunchedEffect(goats) {
+        if (goatId.isBlank() && goats.isNotEmpty()) {
+            goatId = goats.first().id
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (existing == null) "Add $type Record" else "Edit $type Record", fontWeight = FontWeight.Bold) },
         text = {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item {
-                    Box {
-                        OutlinedTextField(
-                            value = goats.find { it.id == goatId }?.let { if (it.name.isBlank()) it.id else "${it.name} (${it.id})" } ?: goatId,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Goat *") },
-                            modifier = Modifier.fillMaxWidth().clickable { showGoatMenu = true },
-                            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }
-                        )
-                        DropdownMenu(expanded = showGoatMenu, onDismissRequest = { showGoatMenu = false }) {
-                            goats.forEach { goat ->
-                                DropdownMenuItem(
-                                    text = { Text(if (goat.name.isBlank()) goat.id else "${goat.name} (${goat.id})") },
-                                    onClick = { goatId = goat.id; showGoatMenu = false }
-                                )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = goats.find { it.id == goatId }?.let { if (it.name.isBlank()) it.id else "${it.name} (${it.id})" } ?: goatId,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Goat *") },
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = { 
+                            IconButton(onClick = { showGoatMenu = !showGoatMenu }) {
+                                Icon(Icons.Default.ArrowDropDown, null)
                             }
                         }
-                    }
-                    DatePickerField("Record Date *", date, { date = it }, Modifier.padding(top = 8.dp))
-                    Field("Title / Description *", title) { title = it }
-
-                    when (type) {
-                        "Health" -> {
-                            Field("Veterinarian", party) { party = it }
-                            DatePickerField("Next Due Date", due, { due = it }, Modifier.padding(top = 8.dp))
-                            Field("Cost", amount) { amount = it }
-                        }
-                        "Breeding" -> {
-                            Field("Sire ID", sireId) { sireId = it }
-                            Text("Expected Kidding: ${kiddingDate(date)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                            DatePickerField("Actual Kidding Date", actualDate, { actualDate = it }, Modifier.padding(top = 8.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Field("Kids Born", kidsCount, Modifier.weight(1f)) { kidsCount = it }
-                                Field("Kids Alive", kidsAlive, Modifier.weight(1f)) { kidsAlive = it }
-                            }
-                        }
-                        "Insurance" -> {
-                            Field("Insurer", party) { party = it }
-                            Field("Policy Number", detail) { detail = it }
-                            DatePickerField("Expiry Date *", due, { due = it }, Modifier.padding(top = 8.dp))
-                            Field("Coverage Amount", amount) { amount = it }
-                        }
-                        "Sale" -> {
-                            Field("Buyer", party) { party = it }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Field("Quantity", quantity, Modifier.weight(1f)) { quantity = it }
-                                Field("Unit (kg, L)", unit, Modifier.weight(1f)) { unit = it }
-                            }
-                            Field("Price", amount) { amount = it }
-                            Text("Payment Status", style = MaterialTheme.typography.labelMedium)
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf("Paid", "Pending", "Partial").forEach { statusValue ->
-                                    FilterChip(selected = payment == statusValue, onClick = { payment = statusValue }, label = { Text(statusValue) }, modifier = Modifier.weight(1f))
+                    )
+                    // Transparent overlay to catch clicks on the whole text field
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable { showGoatMenu = true }
+                    )
+                    
+                    DropdownMenu(
+                        expanded = showGoatMenu,
+                        onDismissRequest = { showGoatMenu = false },
+                        modifier = Modifier.fillMaxWidth(0.8f).heightIn(max = 300.dp)
+                    ) {
+                        goats.forEach { goat ->
+                            DropdownMenuItem(
+                                text = { 
+                                    Text(
+                                        text = if (goat.name.isBlank()) goat.id else "${goat.name} (${goat.id})",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    ) 
+                                },
+                                onClick = { 
+                                    goatId = goat.id
+                                    showGoatMenu = false 
                                 }
+                            )
+                        }
+                    }
+                }
+                
+                DatePickerField("Record Date *", date, { date = it })
+                Field("Title / Description *", title) { title = it }
+
+                when (type) {
+                    "Health" -> {
+                        Field("Veterinarian", party) { party = it }
+                        DatePickerField("Next Due Date", due, { due = it })
+                        Field("Cost", amount) { amount = it }
+                    }
+                    "Breeding" -> {
+                        Field("Sire ID", sireId) { sireId = it }
+                        Text("Expected Kidding: ${kiddingDate(date)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        DatePickerField("Actual Kidding Date", actualDate, { actualDate = it })
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Field("Kids Born", kidsCount, Modifier.weight(1f)) { kidsCount = it }
+                            Field("Kids Alive", kidsAlive, Modifier.weight(1f)) { kidsAlive = it }
+                        }
+                    }
+                    "Insurance" -> {
+                        Field("Insurer", party) { party = it }
+                        Field("Policy Number", detail) { detail = it }
+                        DatePickerField("Expiry Date *", due, { due = it })
+                        Field("Coverage Amount", amount) { amount = it }
+                    }
+                    "Sale" -> {
+                        Field("Buyer", party) { party = it }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Field("Quantity", quantity, Modifier.weight(1f)) { quantity = it }
+                            Field("Unit (kg, L)", unit, Modifier.weight(1f)) { unit = it }
+                        }
+                        Field("Price", amount) { amount = it }
+                        Text("Payment Status", style = MaterialTheme.typography.labelMedium)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("Paid", "Pending", "Partial").forEach { statusValue ->
+                                FilterChip(selected = payment == statusValue, onClick = { payment = statusValue }, label = { Text(statusValue) }, modifier = Modifier.weight(1f))
                             }
                         }
-                        "Transfer" -> {
-                            Field("New Owner / Farm", party) { party = it }
-                            Field("Reason", detail) { detail = it }
-                        }
                     }
+                    "Transfer" -> {
+                        Field("New Owner / Farm", party) { party = it }
+                        Field("Reason", detail) { detail = it }
+                    }
+                }
 
-                    if (type != "Insurance" && type != "Transfer") {
-                        OutlinedTextField(
-                            value = detail,
-                            onValueChange = { detail = it },
-                            label = { Text("Additional Details") },
-                            modifier = Modifier.fillMaxWidth().height(80.dp)
-                        )
-                    }
+                if (type != "Insurance" && type != "Transfer") {
+                    OutlinedTextField(
+                        value = detail,
+                        onValueChange = { detail = it },
+                        label = { Text("Additional Details") },
+                        modifier = Modifier.fillMaxWidth().height(80.dp)
+                    )
                 }
             }
         },
