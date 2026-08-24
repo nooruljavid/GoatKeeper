@@ -77,7 +77,7 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
         selectedGoat = null
         editGoat = null
     }
-    print("hello")
+
     Scaffold(
         topBar = {
             TopAppBar(
