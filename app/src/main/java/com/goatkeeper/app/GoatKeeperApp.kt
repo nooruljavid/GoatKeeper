@@ -63,6 +63,21 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
         editRecord = null
     }
 
+    fun deleteRecord(record: FarmRecord) {
+        scope.launch {
+            dao.deleteRecord(record)
+        }
+        editRecord = null
+    }
+
+    fun deleteGoat(goat: Goat) {
+        scope.launch {
+            dao.deleteGoat(goat)
+        }
+        selectedGoat = null
+        editGoat = null
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -116,6 +131,7 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
                     goats = goats,
                     onAdd = { type -> openAddRecord(type, id) },
                     onEdit = { editGoat = it },
+                    onDeleteGoat = { deleteGoat(it) },
                     onEditRecord = { editRecord = it },
                     onMarkDeceased = { goatId -> scope.launch { dao.updateGoatStatus(goatId, "Deceased") } }
                 )
@@ -152,7 +168,8 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
             onSave = {
                 scope.launch { dao.updateGoat(it) }
                 editGoat = null
-            }
+            },
+            onDelete = { deleteGoat(it) }
         )
     }
 
@@ -177,7 +194,8 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String) -> Unit) {
             initialGoatId = record.goatId,
             existing = record,
             onDismiss = { editRecord = null },
-            onSave = ::saveRecord
+            onSave = ::saveRecord,
+            onDelete = { deleteRecord(it) }
         )
     }
 }
@@ -334,6 +352,7 @@ private fun GoatProfile(
     goats: List<Goat>,
     onAdd: (String) -> Unit,
     onEdit: (Goat) -> Unit,
+    onDeleteGoat: (Goat) -> Unit,
     onEditRecord: (FarmRecord) -> Unit,
     onMarkDeceased: (String) -> Unit
 ) {
@@ -347,7 +366,7 @@ private fun GoatProfile(
             tabs.forEach { tab -> Tab(selected = activeTab == tab, onClick = { activeTab = tab }, text = { Text(tab) }) }
         }
         when (activeTab) {
-            "Info" -> GoatInfoTab(goat, goats, onEdit, onMarkDeceased)
+            "Info" -> GoatInfoTab(goat, goats, onEdit, onDeleteGoat, onMarkDeceased)
             else -> GoatRecordsTab(records, goats, activeTab, onAdd, onEditRecord)
         }
     }
@@ -358,6 +377,7 @@ private fun GoatInfoTab(
     goat: Goat?,
     allGoats: List<Goat>,
     onEdit: (Goat) -> Unit,
+    onDelete: (Goat) -> Unit,
     onMarkDeceased: (String) -> Unit
 ) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -380,14 +400,25 @@ private fun GoatInfoTab(
                 }
             }
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { onEdit(g) }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.Edit, null); Spacer(Modifier.width(6.dp)); Text("Edit Goat")
-                    }
-                    if (g.status == "Active") {
-                        OutlinedButton(onClick = { onMarkDeceased(g.id) }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Close, null); Spacer(Modifier.width(6.dp)); Text("Deceased")
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { onEdit(g) }, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.Edit, null); Spacer(Modifier.width(6.dp)); Text("Edit Goat")
                         }
+                        if (g.status == "Active") {
+                            OutlinedButton(onClick = { onMarkDeceased(g.id) }, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Default.Close, null); Spacer(Modifier.width(6.dp)); Text("Deceased")
+                            }
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = { onDelete(g) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Delete Goat Entry")
                     }
                 }
             }
@@ -474,7 +505,8 @@ private fun Empty(text: String) = Box(Modifier.fillMaxWidth().padding(30.dp), co
 private fun GoatDialog(
     existing: Goat?,
     onDismiss: () -> Unit,
-    onSave: (Goat) -> Unit
+    onSave: (Goat) -> Unit,
+    onDelete: ((Goat) -> Unit)? = null
 ) {
     var id by remember(existing?.id) { mutableStateOf(existing?.id ?: "") }
     var name by remember(existing?.id) { mutableStateOf(existing?.name ?: "") }
@@ -518,26 +550,44 @@ private fun GoatDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = id.isNotBlank() && breed.isNotBlank(), onClick = {
-                onSave(
-                    Goat(
-                        id = id.trim(),
-                        name = name.trim(),
-                        breed = breed.trim(),
-                        dateOfBirth = dob.trim(),
-                        gender = gender.trim(),
-                        status = status,
-                        damId = dam.trim(),
-                        sireId = sire.trim(),
-                        photoUri = existing?.photoUri ?: "",
-                        colorMarkings = color.trim(),
-                        microchipId = microchip.trim(),
-                        notes = notes.trim()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (existing != null && onDelete != null) {
+                    TextButton(
+                        onClick = { onDelete(existing) },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Delete")
+                    }
+                    Spacer(Modifier.weight(1f))
+                }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(enabled = id.isNotBlank() && breed.isNotBlank(), onClick = {
+                    onSave(
+                        Goat(
+                            id = id.trim(),
+                            name = name.trim(),
+                            breed = breed.trim(),
+                            dateOfBirth = dob.trim(),
+                            gender = gender.trim(),
+                            status = status,
+                            damId = dam.trim(),
+                            sireId = sire.trim(),
+                            photoUri = existing?.photoUri ?: "",
+                            colorMarkings = color.trim(),
+                            microchipId = microchip.trim(),
+                            notes = notes.trim()
+                        )
                     )
-                )
-            }) { Text("Save") }
+                }) { Text("Save") }
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = {}
     )
 }
 
@@ -548,7 +598,8 @@ private fun RecordDialog(
     initialGoatId: String?,
     existing: FarmRecord?,
     onDismiss: () -> Unit,
-    onSave: (FarmRecord) -> Unit
+    onSave: (FarmRecord) -> Unit,
+    onDelete: ((FarmRecord) -> Unit)? = null
 ) {
     var goatId by remember(existing?.recordId, initialGoatId) { mutableStateOf(existing?.goatId ?: initialGoatId ?: goats.firstOrNull()?.id.orEmpty()) }
     var date by remember(existing?.recordId) { mutableStateOf(existing?.date ?: today) }
@@ -646,30 +697,48 @@ private fun RecordDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = goatId.isNotBlank() && title.isNotBlank(), onClick = {
-                onSave(
-                    FarmRecord(
-                        recordId = existing?.recordId ?: 0L,
-                        goatId = goatId,
-                        type = type,
-                        date = date,
-                        dueDate = if (type == "Breeding" && due.isBlank()) kiddingDate(date) else due,
-                        title = title,
-                        details = detail,
-                        party = party,
-                        amount = amount.toDoubleOrNull(),
-                        quantity = quantity.toDoubleOrNull(),
-                        unit = unit,
-                        paymentStatus = payment,
-                        sireId = sireId,
-                        actualDate = actualDate,
-                        kidsCount = kidsCount.toIntOrNull(),
-                        kidsAlive = kidsAlive.toIntOrNull()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (existing != null && onDelete != null) {
+                    TextButton(
+                        onClick = { onDelete(existing) },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Delete")
+                    }
+                    Spacer(Modifier.weight(1f))
+                }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(enabled = goatId.isNotBlank() && title.isNotBlank(), onClick = {
+                    onSave(
+                        FarmRecord(
+                            recordId = existing?.recordId ?: 0L,
+                            goatId = goatId,
+                            type = type,
+                            date = date,
+                            dueDate = if (type == "Breeding" && due.isBlank()) kiddingDate(date) else due,
+                            title = title,
+                            details = detail,
+                            party = party,
+                            amount = amount.toDoubleOrNull(),
+                            quantity = quantity.toDoubleOrNull(),
+                            unit = unit,
+                            paymentStatus = payment,
+                            sireId = sireId,
+                            actualDate = actualDate,
+                            kidsCount = kidsCount.toIntOrNull(),
+                            kidsAlive = kidsAlive.toIntOrNull()
+                        )
                     )
-                )
-            }) { Text("Save") }
+                }) { Text("Save") }
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = {}
     )
 }
 

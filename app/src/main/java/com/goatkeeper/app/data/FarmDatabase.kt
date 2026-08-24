@@ -76,6 +76,9 @@ interface FarmDao {
 
     @Delete
     suspend fun deleteGoat(goat: Goat)
+
+    @Delete
+    suspend fun deleteRecord(record: FarmRecord)
 }
 
 @Database(entities = [Goat::class, FarmRecord::class], version = 2, exportSchema = false)
