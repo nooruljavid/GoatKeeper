@@ -8,6 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlin.time.Duration.Companion.milliseconds
 
 class SyncManager(private val dao: FarmDao) {
     private val firestore = FirebaseFirestore.getInstance()
@@ -71,7 +72,7 @@ class SyncManager(private val dao: FarmDao) {
                 }
                 
                 android.util.Log.d("SyncManager", "Download Successful!")
-                delay(500) // Small delay to let database settle
+                delay(500.milliseconds) // Small delay to let database settle
                 onComplete()
             } catch (e: Exception) {
                 android.util.Log.e("SyncManager", "Download Failed", e)

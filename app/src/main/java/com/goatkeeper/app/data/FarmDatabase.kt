@@ -27,7 +27,8 @@ data class Goat(
     val photoUri: String = "",
     val colorMarkings: String = "",
     val microchipId: String = "",
-    val notes: String = ""
+    val notes: String = "",
+    val lastViewed: Long = 0
 )
 
 /** A compact, extensible ledger for Health, Breeding, Kidding, Insurance, Sale and Transfer events. */
@@ -85,14 +86,17 @@ interface FarmDao {
 
     @Query("DELETE FROM farm_records")
     suspend fun clearRecords()
+
+    @Query("UPDATE goats SET lastViewed = :timestamp WHERE id = :id")
+    suspend fun updateLastViewed(id: String, timestamp: Long)
 }
 
-@Database(entities = [Goat::class, FarmRecord::class], version = 2, exportSchema = false)
+@Database(entities = [Goat::class, FarmRecord::class], version = 5, exportSchema = false)
 abstract class FarmDatabase : RoomDatabase() {
     abstract fun dao(): FarmDao
     companion object {
         fun create(context: Context) = Room.databaseBuilder(context, FarmDatabase::class.java, "goatkeeper.db")
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(true)
             .build()
     }
 }

@@ -11,6 +11,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -96,11 +98,7 @@ private fun MainAppContent(
 
     val calendarPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            // Optional: Show a toast or feedback
-        }
-    }
+    ) { _ -> }
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var selectedGoat by rememberSaveable { mutableStateOf<String?>(null) }
@@ -110,6 +108,14 @@ private fun MainAppContent(
     var recordGoatId by remember { mutableStateOf<String?>(null) }
     var editRecord by remember { mutableStateOf<FarmRecord?>(null) }
     var showAccountMenu by remember { mutableStateOf(false) }
+
+    fun openGoat(id: String) {
+        selectedGoat = id
+        scope.launch {
+            dao.updateLastViewed(id, System.currentTimeMillis())
+            syncManager.uploadToCloud() // Sync the new timestamp
+        }
+    }
 
     fun openAddRecord(type: String, goatId: String? = null) {
         addRecordType = type
@@ -169,7 +175,7 @@ private fun MainAppContent(
                 navigationIcon = {
                     if (selectedGoat != null) {
                         IconButton(onClick = { selectedGoat = null }) {
-                            Icon(Icons.Default.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onPrimary)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
                 },
@@ -228,7 +234,7 @@ private fun MainAppContent(
                     listOf(
                         "Dashboard" to Icons.Default.Home,
                         "Herd" to Icons.Default.Pets,
-                        "Records" to Icons.Default.List,
+                        "Records" to Icons.AutoMirrored.Filled.List,
                         "Reports" to Icons.Default.Assessment
                     ).forEachIndexed { i, item ->
                         NavigationBarItem(
@@ -262,12 +268,11 @@ private fun MainAppContent(
                     onMarkDeceased = { goatId -> scope.launch { dao.updateGoatStatus(goatId, "Deceased") } }
                 )
             } ?: when (tab) {
-                0 -> Dashboard(goats, records) { selectedGoat = it }
-                1 -> Herd(goats) { selectedGoat = it }
+                0 -> Dashboard(goats, records, onOpen = ::openGoat)
+                1 -> Herd(goats, onOpen = ::openGoat)
                 2 -> Records(
                     records,
                     goats,
-                    onOpen = { selectedGoat = it },
                     onAdd = { openAddRecord(it) },
                     onEdit = { editRecord = it }
                 )
@@ -361,13 +366,14 @@ private fun Dashboard(goats: List<Goat>, records: List<FarmRecord>, onOpen: (Str
             items(alerts, key = { it.recordId }) { record ->
                 RecordItem(
                     record = record,
-                    goatName = goats.find { it.id == record.goatId }?.let { if (it.name.isBlank()) it.id else it.name } ?: "Unknown",
+                    goatName = goats.find { it.id == record.goatId }?.name?.ifBlank { record.goatId } ?: "Unknown",
                     onClick = { if (record.goatId.isNotBlank()) onOpen(record.goatId) }
                 )
             }
         }
         item { Text("Recent Goats", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
-        items(goats.take(3), key = { it.id }) { goat -> GoatCard(goat, onOpen) }
+        val recentGoats = goats.sortedByDescending { it.lastViewed }.take(3)
+        items(recentGoats, key = { it.id }) { goat -> GoatCard(goat, onOpen) }
     }
 }
 
@@ -456,7 +462,6 @@ private fun GoatCard(goat: Goat, open: (String) -> Unit) = Card(
 private fun Records(
     records: List<FarmRecord>,
     goats: List<Goat>,
-    onOpen: (String) -> Unit,
     onAdd: (String) -> Unit,
     onEdit: (FarmRecord) -> Unit
 ) {
@@ -478,7 +483,7 @@ private fun Records(
                 items(shown, key = { it.recordId }) { record ->
                     RecordItem(
                         record = record,
-                        goatName = goats.find { it.id == record.goatId }?.let { if (it.name.isBlank()) it.id else it.name } ?: record.goatId,
+                        goatName = goats.find { it.id == record.goatId }?.name?.ifBlank { record.goatId } ?: record.goatId,
                         onClick = { onEdit(record) }
                     )
                 }
@@ -504,8 +509,18 @@ private fun GoatProfile(
     val tabs = listOf("Info", "Health", "Breeding", "Insurance", "Sales")
 
     Column(Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = tabs.indexOf(activeTab)) {
-            tabs.forEach { tab -> Tab(selected = activeTab == tab, onClick = { activeTab = tab }, text = { Text(tab) }) }
+        ScrollableTabRow(
+            selectedTabIndex = tabs.indexOf(activeTab),
+            edgePadding = 16.dp,
+            divider = {}
+        ) {
+            tabs.forEach { tab ->
+                Tab(
+                    selected = activeTab == tab,
+                    onClick = { activeTab = tab },
+                    text = { Text(tab) }
+                )
+            }
         }
         when (activeTab) {
             "Info" -> GoatInfoTab(goat, goats, onEdit, onDeleteGoat, onMarkDeceased)
@@ -549,8 +564,8 @@ private fun GoatInfoTab(
                         InfoRow("Age", age(g.dateOfBirth))
                         InfoRow("Born", formatDate(g.dateOfBirth))
                         InfoRow("Status", g.status)
-                        if (g.damId.isNotBlank()) InfoRow("Dam", allGoats.find { it.id == g.damId }?.let { if (it.name.isBlank()) it.id else it.name } ?: g.damId)
-                        if (g.sireId.isNotBlank()) InfoRow("Sire", allGoats.find { it.id == g.sireId }?.let { if (it.name.isBlank()) it.id else it.name } ?: g.sireId)
+                        if (g.damId.isNotBlank()) InfoRow("Dam", allGoats.find { it.id == g.damId }?.name?.ifBlank { g.damId } ?: g.damId)
+                        if (g.sireId.isNotBlank()) InfoRow("Sire", allGoats.find { it.id == g.sireId }?.name?.ifBlank { g.sireId } ?: g.sireId)
                         if (g.colorMarkings.isNotBlank()) InfoRow("Color / Markings", g.colorMarkings)
                         if (g.microchipId.isNotBlank()) InfoRow("Microchip", g.microchipId)
                     }
@@ -679,7 +694,7 @@ private fun GoatDialog(
     var photoUri by remember(existing?.id) { mutableStateOf(existing?.photoUri ?: "") }
     var showPhotoOptions by remember { mutableStateOf(false) }
     
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     var tempCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
     val photoPicker = rememberLauncherForActivityResult(
