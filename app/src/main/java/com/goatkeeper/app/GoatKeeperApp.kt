@@ -2,6 +2,7 @@ package com.goatkeeper.app
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -264,8 +265,7 @@ private fun MainAppContent(
                     onAdd = { type -> openAddRecord(type, id) },
                     onEdit = { editGoat = it },
                     onDeleteGoat = { deleteGoat(it) },
-                    onEditRecord = { editRecord = it },
-                    onMarkDeceased = { goatId -> scope.launch { dao.updateGoatStatus(goatId, "Deceased") } }
+                    onEditRecord = { editRecord = it }
                 )
             } ?: when (tab) {
                 0 -> Dashboard(goats, records, onOpen = ::openGoat)
@@ -282,8 +282,11 @@ private fun MainAppContent(
     }
 
     if (addGoat) {
+        val existingBreeds = goats.map { it.breed }.filter { it.isNotBlank() }.distinct().sorted()
         GoatDialog(
             existing = null,
+            allGoats = goats,
+            existingBreeds = existingBreeds,
             onDismiss = { addGoat = false },
             onSave = {
                 scope.launch { 
@@ -296,8 +299,11 @@ private fun MainAppContent(
     }
 
     editGoat?.let { goat ->
+        val existingBreeds = goats.map { it.breed }.filter { it.isNotBlank() }.distinct().sorted()
         GoatDialog(
             existing = goat,
+            allGoats = goats,
+            existingBreeds = existingBreeds,
             onDismiss = { editGoat = null },
             onSave = { updatedGoat ->
                 scope.launch { 
@@ -511,8 +517,7 @@ private fun GoatProfile(
     onAdd: (String) -> Unit,
     onEdit: (Goat) -> Unit,
     onDeleteGoat: (Goat) -> Unit,
-    onEditRecord: (FarmRecord) -> Unit,
-    onMarkDeceased: (String) -> Unit
+    onEditRecord: (FarmRecord) -> Unit
 ) {
     val goat by dao.goat(id).collectAsState(initial = null)
     val records by dao.recordsFor(id).collectAsState(initial = emptyList())
@@ -534,7 +539,7 @@ private fun GoatProfile(
             }
         }
         when (activeTab) {
-            "Info" -> GoatInfoTab(goat, goats, onEdit, onDeleteGoat, onMarkDeceased)
+            "Info" -> GoatInfoTab(goat, goats, onEdit, onDeleteGoat)
             else -> GoatRecordsTab(records, goats, activeTab, onAdd, onEditRecord)
         }
     }
@@ -545,8 +550,7 @@ private fun GoatInfoTab(
     goat: Goat?,
     allGoats: List<Goat>,
     onEdit: (Goat) -> Unit,
-    onDelete: (Goat) -> Unit,
-    onMarkDeceased: (String) -> Unit
+    onDelete: (Goat) -> Unit
 ) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         goat?.let { g ->
@@ -582,26 +586,25 @@ private fun GoatInfoTab(
                     }
                 }
             }
+
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { onEdit(g) }, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Edit, null); Spacer(Modifier.width(6.dp)); Text("Edit Goat")
-                        }
-                        if (g.status == "Active") {
-                            OutlinedButton(onClick = { onMarkDeceased(g.id) }, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Default.Close, null); Spacer(Modifier.width(6.dp)); Text("Deceased")
-                            }
-                        }
+                Text("Family Tree / Pedigree", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                FamilyTree(g, allGoats)
+            }
+
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { onEdit(g) }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.Edit, null); Spacer(Modifier.width(6.dp)); Text("Edit Goat")
                     }
                     OutlinedButton(
                         onClick = { onDelete(g) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
                         Icon(Icons.Default.Delete, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Delete Goat Entry")
+                        Spacer(Modifier.width(6.dp))
+                        Text("Delete Goat")
                     }
                 }
             }
@@ -610,6 +613,91 @@ private fun GoatInfoTab(
                     Text("Notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Card(modifier = Modifier.fillMaxWidth()) { Text(g.notes, modifier = Modifier.padding(16.dp)) }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FamilyTree(goat: Goat, allGoats: List<Goat>) {
+    val dam = allGoats.find { it.id == goat.damId }
+    val sire = allGoats.find { it.id == goat.sireId }
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Row for Parents
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            FamilyTreeNode(
+                id = goat.damId,
+                name = dam?.name ?: "",
+                breed = dam?.breed ?: "Unknown",
+                role = "Dam (Mother)",
+                color = Color(0xFFFCE7F3) // Light Pink
+            )
+            FamilyTreeNode(
+                id = goat.sireId,
+                name = sire?.name ?: "",
+                breed = sire?.breed ?: "Unknown",
+                role = "Sire (Father)",
+                color = Color(0xFFDBEAFE) // Light Blue
+            )
+        }
+
+        // Connector lines
+        Box(modifier = Modifier.height(40.dp).fillMaxWidth()) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val width = size.width
+                val height = size.height
+                
+                // Draw lines from parents towards center
+                drawLine(color = Color.LightGray, start = androidx.compose.ui.geometry.Offset(width * 0.25f, 0f), end = androidx.compose.ui.geometry.Offset(width * 0.25f, height / 2), strokeWidth = 2.dp.toPx())
+                drawLine(color = Color.LightGray, start = androidx.compose.ui.geometry.Offset(width * 0.75f, 0f), end = androidx.compose.ui.geometry.Offset(width * 0.75f, height / 2), strokeWidth = 2.dp.toPx())
+                
+                // Draw horizontal connector
+                drawLine(color = Color.LightGray, start = androidx.compose.ui.geometry.Offset(width * 0.25f, height / 2), end = androidx.compose.ui.geometry.Offset(width * 0.75f, height / 2), strokeWidth = 2.dp.toPx())
+                
+                // Draw line down to current goat
+                drawLine(color = Color.LightGray, start = androidx.compose.ui.geometry.Offset(width / 2, height / 2), end = androidx.compose.ui.geometry.Offset(width / 2, height), strokeWidth = 2.dp.toPx())
+            }
+        }
+
+        // Current Goat
+        FamilyTreeNode(
+            id = goat.id,
+            name = goat.name,
+            breed = goat.breed,
+            role = "This Goat",
+            color = Color(0xFFD1FAE5) // Light Green
+        )
+    }
+}
+
+@Composable
+private fun FamilyTreeNode(id: String, name: String, breed: String, role: String, color: Color) {
+    if (id.isBlank() && role != "This Goat") {
+        Card(
+            modifier = Modifier.width(160.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Box(Modifier.padding(12.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text("$role\nNot Recorded", style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+        }
+    } else {
+        Card(
+            modifier = Modifier.width(160.dp),
+            colors = CardDefaults.cardColors(containerColor = color),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(Modifier.padding(10.dp)) {
+                Text(role, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(if (name.isBlank()) id else "$id - $name", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(breed, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, maxLines = 1)
             }
         }
     }
@@ -687,6 +775,8 @@ private fun Empty(text: String) = Box(Modifier.fillMaxWidth().padding(30.dp), co
 @Composable
 private fun GoatDialog(
     existing: Goat?,
+    allGoats: List<Goat>,
+    existingBreeds: List<String>,
     onDismiss: () -> Unit,
     onSave: (Goat) -> Unit,
     onDelete: ((Goat) -> Unit)? = null
@@ -705,6 +795,15 @@ private fun GoatDialog(
     var photoUri by remember(existing?.id) { mutableStateOf(existing?.photoUri ?: "") }
     var showPhotoOptions by remember { mutableStateOf(false) }
     
+    var showBreedMenu by remember { mutableStateOf(false) }
+    val filteredBreeds = existingBreeds.filter { it.contains(breed, ignoreCase = true) }
+
+    var showDamMenu by remember { mutableStateOf(false) }
+    val filteredDams = allGoats.filter { it.gender == "Female" && (it.id.contains(dam, true) || it.name.contains(dam, true)) }
+
+    var showSireMenu by remember { mutableStateOf(false) }
+    val filteredSires = allGoats.filter { it.gender == "Male" && (it.id.contains(sire, true) || it.name.contains(sire, true)) }
+
     val context = LocalContext.current
     var tempCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
@@ -801,7 +900,32 @@ private fun GoatDialog(
                 
                 Field("Goat ID *", id, change = { id = it })
                 Field("Name", name, change = { name = it })
-                Field("Breed *", breed, change = { breed = it })
+                
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Field("Breed *", breed, change = { 
+                        breed = it
+                        showBreedMenu = true
+                    })
+                    if (showBreedMenu && filteredBreeds.isNotEmpty()) {
+                        DropdownMenu(
+                            expanded = showBreedMenu,
+                            onDismissRequest = { showBreedMenu = false },
+                            modifier = Modifier.fillMaxWidth(0.9f),
+                            properties = androidx.compose.ui.window.PopupProperties(focusable = false)
+                        ) {
+                            filteredBreeds.forEach { suggestion ->
+                                DropdownMenuItem(
+                                    text = { Text(suggestion) },
+                                    onClick = {
+                                        breed = suggestion
+                                        showBreedMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                
                 DatePickerField("Date of Birth *", dob, { dob = it })
                 
                 Column {
@@ -826,8 +950,56 @@ private fun GoatDialog(
                     }
                 }
                 
-                Field("Dam ID", dam, change = { dam = it })
-                Field("Sire ID", sire, change = { sire = it })
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Field("Dam ID", dam, change = { 
+                        dam = it
+                        showDamMenu = true
+                    })
+                    if (showDamMenu && filteredDams.isNotEmpty()) {
+                        DropdownMenu(
+                            expanded = showDamMenu,
+                            onDismissRequest = { showDamMenu = false },
+                            modifier = Modifier.fillMaxWidth(0.9f),
+                            properties = androidx.compose.ui.window.PopupProperties(focusable = false)
+                        ) {
+                            filteredDams.forEach { d ->
+                                DropdownMenuItem(
+                                    text = { Text("${d.id} ${if(d.name.isNotBlank()) "(${d.name})" else ""}") },
+                                    onClick = {
+                                        dam = d.id
+                                        showDamMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Field("Sire ID", sire, change = { 
+                        sire = it
+                        showSireMenu = true
+                    })
+                    if (showSireMenu && filteredSires.isNotEmpty()) {
+                        DropdownMenu(
+                            expanded = showSireMenu,
+                            onDismissRequest = { showSireMenu = false },
+                            modifier = Modifier.fillMaxWidth(0.9f),
+                            properties = androidx.compose.ui.window.PopupProperties(focusable = false)
+                        ) {
+                            filteredSires.forEach { s ->
+                                DropdownMenuItem(
+                                    text = { Text("${s.id} ${if(s.name.isNotBlank()) "(${s.name})" else ""}") },
+                                    onClick = {
+                                        sire = s.id
+                                        showSireMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                
                 Field("Color / Markings", color, change = { color = it })
                 Field("Microchip ID", microchip, change = { microchip = it })
                 OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth().height(100.dp))
@@ -900,6 +1072,9 @@ private fun RecordDialog(
     var kidsCount by remember(existing?.recordId) { mutableStateOf(existing?.kidsCount?.toString() ?: "") }
     var kidsAlive by remember(existing?.recordId) { mutableStateOf(existing?.kidsAlive?.toString() ?: "") }
     var showGoatMenu by remember { mutableStateOf(false) }
+    var showTitleMenu by remember { mutableStateOf(false) }
+
+    val healthOptions = listOf("Deworming", "Vaccination")
 
     LaunchedEffect(goats) {
         if (goatId.isBlank() && goats.isNotEmpty()) {
@@ -960,7 +1135,33 @@ private fun RecordDialog(
                 }
                 
                 DatePickerField("Record Date *", date, { date = it })
-                Field("Title / Description *", title) { title = it }
+                
+                if (type == "Health") {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Field("Health Event (Deworming/Vaccination) *", title, change = { 
+                            title = it
+                            showTitleMenu = true
+                        })
+                        DropdownMenu(
+                            expanded = showTitleMenu,
+                            onDismissRequest = { showTitleMenu = false },
+                            modifier = Modifier.fillMaxWidth(0.9f),
+                            properties = androidx.compose.ui.window.PopupProperties(focusable = false)
+                        ) {
+                            healthOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        title = option
+                                        showTitleMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Field("Title / Description *", title) { title = it }
+                }
 
                 when (type) {
                     "Health" -> {
