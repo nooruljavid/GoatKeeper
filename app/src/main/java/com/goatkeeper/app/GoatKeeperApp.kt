@@ -299,9 +299,20 @@ private fun MainAppContent(
         GoatDialog(
             existing = goat,
             onDismiss = { editGoat = null },
-            onSave = {
+            onSave = { updatedGoat ->
                 scope.launch { 
-                    dao.updateGoat(it)
+                    if (updatedGoat.id != goat.id) {
+                        // 1. Delete the old ID from the cloud
+                        syncManager.deleteGoatFromCloud(goat.id)
+                        
+                        // 2. Update the local ID (cascades to records)
+                        dao.updateGoatId(goat.id, updatedGoat.id)
+                        selectedGoat = updatedGoat.id
+                    }
+                    // 3. Save the new/updated goat locally
+                    dao.updateGoat(updatedGoat)
+                    
+                    // 4. Push all changes to the cloud
                     syncManager.uploadToCloud()
                 }
                 editGoat = null

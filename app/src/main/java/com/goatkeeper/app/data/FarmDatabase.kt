@@ -5,6 +5,8 @@ import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Delete
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
@@ -32,7 +34,19 @@ data class Goat(
 )
 
 /** A compact, extensible ledger for Health, Breeding, Kidding, Insurance, Sale and Transfer events. */
-@Entity(tableName = "farm_records")
+@Entity(
+    tableName = "farm_records",
+    foreignKeys = [
+        ForeignKey(
+            entity = Goat::class,
+            parentColumns = ["id"],
+            childColumns = ["goatId"],
+            onUpdate = ForeignKey.CASCADE,
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index("goatId")]
+)
 data class FarmRecord(
     @PrimaryKey(autoGenerate = true) val recordId: Long = 0,
     val goatId: String = "",
@@ -89,9 +103,12 @@ interface FarmDao {
 
     @Query("UPDATE goats SET lastViewed = :timestamp WHERE id = :id")
     suspend fun updateLastViewed(id: String, timestamp: Long)
+
+    @Query("UPDATE goats SET id = :newId WHERE id = :oldId")
+    suspend fun updateGoatId(oldId: String, newId: String)
 }
 
-@Database(entities = [Goat::class, FarmRecord::class], version = 5, exportSchema = false)
+@Database(entities = [Goat::class, FarmRecord::class], version = 6, exportSchema = false)
 abstract class FarmDatabase : RoomDatabase() {
     abstract fun dao(): FarmDao
     companion object {
