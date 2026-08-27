@@ -7,7 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.core.content.FileProvider
 import com.goatkeeper.app.data.FarmDatabase
+import java.io.File
 
 class MainActivity : ComponentActivity() {
 
@@ -23,21 +25,24 @@ class MainActivity : ComponentActivity() {
                     secondary = Color(0xFFF59E0B)
                 )
             ) {
-                GoatKeeperApp(database.dao(), ::shareText)
+                GoatKeeperApp(database.dao(), ::shareReport)
             }
         }
     }
 
-    private fun shareText(title: String, text: String) {
-        startActivity(
-            Intent.createChooser(
-                Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_SUBJECT, title)
-                    putExtra(Intent.EXTRA_TEXT, text)
-                },
-                "Share report"
-            )
-        )
+    private fun shareReport(title: String, text: String, file: File? = null) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            if (file != null) {
+                val uri = FileProvider.getUriForFile(applicationContext, "com.goatkeeper.app.fileprovider", file)
+                type = contentResolver.getType(uri) ?: "*/*"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } else {
+                type = "text/plain"
+            }
+            putExtra(Intent.EXTRA_SUBJECT, title)
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        startActivity(Intent.createChooser(intent, "Share report"))
     }
 }
