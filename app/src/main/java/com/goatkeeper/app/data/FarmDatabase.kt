@@ -18,7 +18,6 @@ import androidx.room.RoomDatabase
 import androidx.room.Update
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -91,7 +90,7 @@ interface FarmDao {
     @Query("UPDATE goats SET status = :status WHERE id = :goatId")
     suspend fun updateGoatStatus(goatId: String, status: String)
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveRecord(record: FarmRecord)
 
     @Update
@@ -154,7 +153,6 @@ abstract class FarmDatabase : RoomDatabase() {
                 val connectivity = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
                 val callback = object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) {
-                        // Network availability is the retry trigger for offline changes.
                         CoroutineScope(Dispatchers.IO).launch {
                             SyncManager(dao).syncNow()
                         }
