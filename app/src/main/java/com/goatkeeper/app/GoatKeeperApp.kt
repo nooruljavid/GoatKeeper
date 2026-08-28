@@ -31,9 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import coil.compose.AsyncImage
 import com.goatkeeper.app.data.*
 import com.goatkeeper.app.ui.LoginScreen
 import com.goatkeeper.app.ui.components.*
@@ -57,32 +57,40 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String, File?) -> Unit) {
     var user by remember { mutableStateOf(auth.currentUser) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    
     val syncManager = remember(dao) { SyncManager(dao) }
 
     if (user == null) {
         LoginScreen { newUser ->
             user = newUser
-            syncManager.downloadFromCloud()
+            // On a fresh login, pull the cloud copy. Any local data that belongs to this
+            // account is synchronized first when the account is already active.
+            scope.launch { syncManager.syncNow() }
         }
     } else {
         MainAppContent(dao, share, syncManager, user!!) {
             scope.launch {
-                // 1. Sign out from Firebase
+                // Never clear Room data until the current local state has been pushed.
+                // This is critical for offline edits followed by sign-out.
+                val synced = syncManager.syncNow()
+                if (!synced) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "Could not sync your changes. Connect to the internet before signing out.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    return@launch
+                }
+
                 auth.signOut()
-                
-                // 2. Sign out from Google to force account selection next time
+
                 val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                     .requestIdToken("39674470741-uj8j4igkp4sgsr3cbh346pptu5td2214.apps.googleusercontent.com")
                     .requestEmail()
                     .build()
                 GoogleSignIn.getClient(context, gso).signOut()
-                
-                // 3. Clear local data to ensure privacy for the next user
+
                 dao.clearGoats()
                 dao.clearRecords()
-                
-                // 4. Update UI state
                 user = null
             }
         }
@@ -117,8 +125,7 @@ private fun MainAppContent(
     var editRecord by remember { mutableStateOf<FarmRecord?>(null) }
     var showAccountMenu by remember { mutableStateOf(false) }
     var selectedGoatTab by rememberSaveable { mutableStateOf("Info") }
-    
-    // Persistent Navigation States
+
     var tabHistory by rememberSaveable { mutableStateOf(listOf(0)) }
     var herdQuery by rememberSaveable { mutableStateOf("") }
     var herdGender by rememberSaveable { mutableStateOf("All") }
@@ -133,7 +140,7 @@ private fun MainAppContent(
         selectedGoatTab = initialTab
         scope.launch {
             dao.updateLastViewed(id, System.currentTimeMillis())
-            syncManager.uploadToCloud() // Sync the new timestamp
+            syncManager.uploadToCloud()
         }
     }
 
@@ -160,8 +167,7 @@ private fun MainAppContent(
                 "Transfer" -> dao.updateGoatStatus(record.goatId, "Transferred")
             }
             syncManager.uploadToCloud()
-            
-            // Sync with Google Calendar if a due date is set
+
             if (record.dueDate.isNotBlank()) {
                 val goatName = goats.find { it.id == record.goatId }?.name?.ifBlank { record.goatId } ?: record.goatId
                 calendarManager.addReminder(record, goatName)
@@ -183,7 +189,8 @@ private fun MainAppContent(
     fun deleteGoat(goat: Goat) {
         scope.launch {
             dao.deleteGoat(goat)
-            syncManager.deleteGoatFromCloud(goat.id)
+            // Use the stable cloud identity, not the editable Goat ID.
+            syncManager.deleteGoatFromCloud(goat.cloudId.ifBlank { goat.id })
         }
         selectedGoat = null
         editGoat = null
@@ -269,7 +276,7 @@ private fun MainAppContent(
                     ).forEachIndexed { i, item ->
                         NavigationBarItem(
                             selected = tab == i,
-                            onClick = { 
+                            onClick = {
                                 if (tab != i) {
                                     tab = i
                                     tabHistory = tabHistory + i
@@ -342,7 +349,7 @@ private fun MainAppContent(
             existingBreeds = existingBreeds,
             onDismiss = { addGoat = false },
             onSave = {
-                scope.launch { 
+                scope.launch {
                     dao.saveGoat(it)
                     syncManager.uploadToCloud()
                 }
@@ -359,19 +366,14 @@ private fun MainAppContent(
             existingBreeds = existingBreeds,
             onDismiss = { editGoat = null },
             onSave = { updatedGoat ->
-                scope.launch { 
+                scope.launch {
+                    // The cloud document identity is stable, so a Goat ID rename is an update,
+                    // not a delete + create. This prevents 0001 and 0002 from co-existing.
                     if (updatedGoat.id != goat.id) {
-                        // 1. Delete the old ID from the cloud
-                        syncManager.deleteGoatFromCloud(goat.id)
-                        
-                        // 2. Update the local ID (cascades to records)
                         dao.updateGoatId(goat.id, updatedGoat.id)
                         selectedGoat = updatedGoat.id
                     }
-                    // 3. Save the new/updated goat locally
                     dao.updateGoat(updatedGoat)
-                    
-                    // 4. Push all changes to the cloud
                     syncManager.uploadToCloud()
                 }
                 editGoat = null
