@@ -1,6 +1,8 @@
 package com.goatkeeper.app.data
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Delete
@@ -14,7 +16,11 @@ import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Update
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 @Entity(tableName = "goats")
 data class Goat(
@@ -124,13 +130,43 @@ abstract class FarmDatabase : RoomDatabase() {
             }
         }
 
-        fun create(context: Context) = Room.databaseBuilder(
-            context,
-            FarmDatabase::class.java,
-            "goatkeeper.db"
-        )
-            .addMigrations(MIGRATION_6_7)
-            .fallbackToDestructiveMigration(true)
-            .build()
+        @Volatile
+        private var networkCallbackRegistered = false
+
+        fun create(context: Context): FarmDatabase {
+            val database = Room.databaseBuilder(
+                context,
+                FarmDatabase::class.java,
+                "goatkeeper.db"
+            )
+                .addMigrations(MIGRATION_6_7)
+                .fallbackToDestructiveMigration(true)
+                .build()
+
+            registerNetworkSync(context.applicationContext, database.dao())
+            return database
+        }
+
+        private fun registerNetworkSync(context: Context, dao: FarmDao) {
+            if (networkCallbackRegistered) return
+            synchronized(this) {
+                if (networkCallbackRegistered) return
+                val connectivity = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                val callback = object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: Network) {
+                        // Network availability is the retry trigger for offline changes.
+                        CoroutineScope(Dispatchers.IO).launch {
+                            SyncManager(dao).syncNow()
+                        }
+                    }
+                }
+                try {
+                    connectivity.registerDefaultNetworkCallback(callback)
+                    networkCallbackRegistered = true
+                } catch (e: Exception) {
+                    android.util.Log.e("FarmDatabase", "Could not register network sync", e)
+                }
+            }
+        }
     }
 }
