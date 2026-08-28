@@ -2,8 +2,10 @@ package com.goatkeeper.app.data
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
@@ -21,7 +23,7 @@ class SyncManager(private val dao: FarmDao) {
 
     /** Fire-and-forget upload used after normal local edits. Failed uploads are retried by syncNow(). */
     fun uploadToCloud() {
-        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             uploadToCloudNow()
         }
     }
@@ -71,7 +73,7 @@ class SyncManager(private val dao: FarmDao) {
 
     /** Backwards-compatible download entry point used by login. */
     fun downloadFromCloud(onComplete: () -> Unit = {}) {
-        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             if (downloadFromCloudNow()) onComplete()
         }
     }
@@ -96,7 +98,7 @@ class SyncManager(private val dao: FarmDao) {
                 dao.saveRecord(record)
             }
 
-            android.util.Log.d("SyncManager", "Download successful: ${goatSnapshots.size()} goats, ${recordSnapshots.size()} records")
+            android.util.Log.d("SyncManager", "Download successful: ${goatSnapshots.size()} goats, ${recordSnapshots.size} records")
             true
         } catch (e: Exception) {
             android.util.Log.e("SyncManager", "Download failed", e)
