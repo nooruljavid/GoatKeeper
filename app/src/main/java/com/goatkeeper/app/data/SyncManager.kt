@@ -46,6 +46,9 @@ class SyncManager(private val dao: FarmDao) {
                     .set(record).await()
             }
 
+            // Do not download until all writes currently issued by this sync are acknowledged.
+            firestore.waitForPendingWrites().await()
+
             android.util.Log.d("SyncManager", "Upload successful: ${goats.size} goats, ${records.size} records")
             true
         } catch (e: Exception) {
