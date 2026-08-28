@@ -51,30 +51,23 @@ fun GoatDialog(
     var notes by remember(existing?.id) { mutableStateOf(existing?.notes ?: "") }
     var photoUri by remember(existing?.id) { mutableStateOf(existing?.photoUri ?: "") }
     var showPhotoOptions by remember { mutableStateOf(false) }
-    
     var showBreedMenu by remember { mutableStateOf(false) }
     val filteredBreeds = existingBreeds.filter { it.contains(breed, ignoreCase = true) }
-
     var showDamMenu by remember { mutableStateOf(false) }
     val filteredDams = allGoats.filter { it.gender == "Female" && (it.id.contains(dam, true) || it.name.contains(dam, true)) }
-
     var showSireMenu by remember { mutableStateOf(false) }
     val filteredSires = allGoats.filter { it.gender == "Male" && (it.id.contains(sire, true) || it.name.contains(sire, true)) }
 
     val context = LocalContext.current
     var tempCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
-
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri -> if (uri != null) photoUri = uri.toString() }
     )
-
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
-            if (success && tempCameraUri != null) {
-                photoUri = tempCameraUri.toString()
-            }
+            if (success && tempCameraUri != null) photoUri = tempCameraUri.toString()
         }
     )
 
@@ -91,10 +84,7 @@ fun GoatDialog(
             title = { Text("Goat Photo") },
             text = { Text("Choose a photo source for your goat.") },
             confirmButton = {
-                TextButton(onClick = {
-                    showPhotoOptions = false
-                    takePhoto()
-                }) {
+                TextButton(onClick = { showPhotoOptions = false; takePhoto() }) {
                     Icon(Icons.Default.CameraAlt, null)
                     Spacer(Modifier.width(8.dp))
                     Text("Camera")
@@ -118,18 +108,12 @@ fun GoatDialog(
         title = { Text(if (existing == null) "Register Goat" else "Edit Goat", fontWeight = FontWeight.Bold) },
         text = {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { showPhotoOptions = true },
+                    modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant).clickable { showPhotoOptions = true },
                     contentAlignment = Alignment.Center
                 ) {
                     if (photoUri.isBlank()) {
@@ -139,12 +123,7 @@ fun GoatDialog(
                             Text("Add Photo", style = MaterialTheme.typography.labelMedium)
                         }
                     } else {
-                        AsyncImage(
-                            model = photoUri,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
+                        AsyncImage(model = photoUri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         Surface(
                             modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
                             shape = RoundedCornerShape(16.dp),
@@ -154,15 +133,12 @@ fun GoatDialog(
                         }
                     }
                 }
-                
+
                 Field("Goat ID *", id, change = { id = it })
                 Field("Name", name, change = { name = it })
-                
+
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    Field("Breed *", breed, change = { 
-                        breed = it
-                        showBreedMenu = true
-                    })
+                    Field("Breed *", breed, change = { breed = it; showBreedMenu = true })
                     if (showBreedMenu && filteredBreeds.isNotEmpty()) {
                         DropdownMenu(
                             expanded = showBreedMenu,
@@ -171,20 +147,14 @@ fun GoatDialog(
                             properties = androidx.compose.ui.window.PopupProperties(focusable = false)
                         ) {
                             filteredBreeds.forEach { suggestion ->
-                                DropdownMenuItem(
-                                    text = { Text(suggestion) },
-                                    onClick = {
-                                        breed = suggestion
-                                        showBreedMenu = false
-                                    }
-                                )
+                                DropdownMenuItem(text = { Text(suggestion) }, onClick = { breed = suggestion; showBreedMenu = false })
                             }
                         }
                     }
                 }
-                
+
                 DatePickerField("Date of Birth *", dob, { dob = it })
-                
+
                 Column {
                     Text("Gender", style = MaterialTheme.typography.labelMedium)
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -192,7 +162,7 @@ fun GoatDialog(
                         FilterChip(selected = gender == "Male", onClick = { gender = "Male" }, label = { Text("♂ Male") }, modifier = Modifier.weight(1f))
                     }
                 }
-                
+
                 Column {
                     Text("Status", style = MaterialTheme.typography.labelMedium)
                     FlowRow(
@@ -205,12 +175,9 @@ fun GoatDialog(
                         }
                     }
                 }
-                
+
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    Field("Dam ID", dam, change = { 
-                        dam = it
-                        showDamMenu = true
-                    })
+                    Field("Dam ID", dam, change = { dam = it; showDamMenu = true })
                     if (showDamMenu && filteredDams.isNotEmpty()) {
                         DropdownMenu(
                             expanded = showDamMenu,
@@ -220,11 +187,8 @@ fun GoatDialog(
                         ) {
                             filteredDams.forEach { d ->
                                 DropdownMenuItem(
-                                    text = { Text("${d.id} ${if(d.name.isNotBlank()) "(${d.name})" else ""}") },
-                                    onClick = {
-                                        dam = d.id
-                                        showDamMenu = false
-                                    }
+                                    text = { Text("${d.id} ${if (d.name.isNotBlank()) "(${d.name})" else ""}") },
+                                    onClick = { dam = d.id; showDamMenu = false }
                                 )
                             }
                         }
@@ -232,10 +196,7 @@ fun GoatDialog(
                 }
 
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    Field("Sire ID", sire, change = { 
-                        sire = it
-                        showSireMenu = true
-                    })
+                    Field("Sire ID", sire, change = { sire = it; showSireMenu = true })
                     if (showSireMenu && filteredSires.isNotEmpty()) {
                         DropdownMenu(
                             expanded = showSireMenu,
@@ -245,28 +206,21 @@ fun GoatDialog(
                         ) {
                             filteredSires.forEach { s ->
                                 DropdownMenuItem(
-                                    text = { Text("${s.id} ${if(s.name.isNotBlank()) "(${s.name})" else ""}") },
-                                    onClick = {
-                                        sire = s.id
-                                        showSireMenu = false
-                                    }
+                                    text = { Text("${s.id} ${if (s.name.isNotBlank()) "(${s.name})" else ""}") },
+                                    onClick = { sire = s.id; showSireMenu = false }
                                 )
                             }
                         }
                     }
                 }
-                
+
                 Field("Color / Markings", color, change = { color = it })
                 Field("Microchip ID", microchip, change = { microchip = it })
                 OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth().height(100.dp))
             }
         },
         confirmButton = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 if (existing != null && onDelete != null) {
                     TextButton(
                         onClick = { onDelete(existing) },
@@ -283,6 +237,8 @@ fun GoatDialog(
                     onSave(
                         Goat(
                             id = id.trim(),
+                            // Keep the original Firestore document identity when Goat ID changes.
+                            cloudId = existing?.cloudId ?: java.util.UUID.randomUUID().toString(),
                             name = name.trim(),
                             breed = breed.trim(),
                             dateOfBirth = dob.trim(),
