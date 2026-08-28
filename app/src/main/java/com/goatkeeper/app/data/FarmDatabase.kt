@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.Flow
 @Entity(tableName = "goats")
 data class Goat(
     @PrimaryKey val id: String = "",
+    // Stable Firestore document identity. Goat ID is editable; this value is not.
+    val cloudId: String = java.util.UUID.randomUUID().toString(),
     val name: String = "",
     val breed: String = "",
     val dateOfBirth: String = "",
@@ -108,11 +110,26 @@ interface FarmDao {
     suspend fun updateGoatId(oldId: String, newId: String)
 }
 
-@Database(entities = [Goat::class, FarmRecord::class], version = 6, exportSchema = false)
+@Database(entities = [Goat::class, FarmRecord::class], version = 7, exportSchema = false)
 abstract class FarmDatabase : RoomDatabase() {
     abstract fun dao(): FarmDao
+
     companion object {
-        fun create(context: Context) = Room.databaseBuilder(context, FarmDatabase::class.java, "goatkeeper.db")
+        private val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Existing Firestore documents used the old Goat ID as their document ID.
+                // Preserve that identity when introducing the new stable cloudId field.
+                db.execSQL("ALTER TABLE goats ADD COLUMN cloudId TEXT NOT NULL DEFAULT ''")
+                db.execSQL("UPDATE goats SET cloudId = id WHERE cloudId = ''")
+            }
+        }
+
+        fun create(context: Context) = Room.databaseBuilder(
+            context,
+            FarmDatabase::class.java,
+            "goatkeeper.db"
+        )
+            .addMigrations(MIGRATION_6_7)
             .fallbackToDestructiveMigration(true)
             .build()
     }
