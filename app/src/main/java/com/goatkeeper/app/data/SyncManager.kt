@@ -106,11 +106,26 @@ class SyncManager(private val dao: FarmDao) {
         }
     }
 
-    suspend fun deleteGoatFromCloud(id: String) {
+    suspend fun deleteGoatFromCloud(cloudId: String, tagId: String) {
         val uid = getUserId() ?: return
         try {
+            // Delete associated records first (Firestore doesn't have CASCADE)
+            val records = firestore.collection("users").document(uid)
+                .collection("farm_records")
+                .whereEqualTo("goatId", tagId)
+                .get().await()
+
+            if (!records.isEmpty) {
+                val batch = firestore.batch()
+                for (doc in records) {
+                    batch.delete(doc.reference)
+                }
+                batch.commit().await()
+            }
+
+            // Delete the goat document
             firestore.collection("users").document(uid)
-                .collection("goats").document(id).delete().await()
+                .collection("goats").document(cloudId).delete().await()
         } catch (e: Exception) {
             android.util.Log.e("SyncManager", "Delete goat failed", e)
         }

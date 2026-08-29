@@ -118,34 +118,41 @@ fun calculateHerdHealth(goats: List<Goat>, allRecords: List<FarmRecord>, today: 
     
     if (activeGoats.isEmpty()) return HerdHealthStats(0, 100, 0, 0, 100, 100, emptyList(), emptyList(), emptyList(), emptyList())
 
+    val herdRecords = allRecords.filter { it.goatId == null }
+    val hasHerdDeworming = hasActiveDeworming(herdRecords, today)
+    val hasHerdVaccination = hasActiveVaccination(herdRecords, today)
+
     // Overall health percentage based on adult goats only
     val adultHealths = adultGoats.map { goat ->
         val goatRecords = allRecords.filter { it.goatId == goat.id }
-        calculateHealthStatus(goat, goatRecords, today)
+        var percentage = 60
+        if (hasHerdDeworming || hasActiveDeworming(goatRecords, today)) percentage += 20
+        if (hasHerdVaccination || hasActiveVaccination(goatRecords, today)) percentage += 20
+        percentage
     }
     val averageHealth = if (adultHealths.isEmpty()) 100 else adultHealths.average().toInt()
 
     val dewormed = activeGoats.count { goat -> 
-        hasActiveDeworming(allRecords.filter { it.goatId == goat.id }, today) || isKid(goat.dateOfBirth)
+        isKid(goat.dateOfBirth) || hasHerdDeworming || hasActiveDeworming(allRecords.filter { it.goatId == goat.id }, today)
     }
     val vaccinated = activeGoats.count { goat ->
-        hasActiveVaccination(allRecords.filter { it.goatId == goat.id }, today) || isKid(goat.dateOfBirth)
+        isKid(goat.dateOfBirth) || hasHerdVaccination || hasActiveVaccination(allRecords.filter { it.goatId == goat.id }, today)
     }
 
     val exceededDeworming = adultGoats.filter { goat ->
-        hasExceededDeworming(allRecords.filter { it.goatId == goat.id }, today)
+        !hasHerdDeworming && hasExceededDeworming(allRecords.filter { it.goatId == goat.id }, today)
     }.map { it.id }
 
     val exceededVaccination = adultGoats.filter { goat ->
-        hasExceededVaccination(allRecords.filter { it.goatId == goat.id }, today)
+        !hasHerdVaccination && hasExceededVaccination(allRecords.filter { it.goatId == goat.id }, today)
     }.map { it.id }
 
     val missingDeworming = adultGoats.filter { goat ->
-        hasNoDeworming(allRecords.filter { it.goatId == goat.id })
+        !hasHerdDeworming && hasNoDeworming(allRecords.filter { it.goatId == goat.id })
     }.map { it.id }
 
     val missingVaccination = adultGoats.filter { goat ->
-        hasNoVaccination(allRecords.filter { it.goatId == goat.id })
+        !hasHerdVaccination && hasNoVaccination(allRecords.filter { it.goatId == goat.id })
     }.map { it.id }
 
     return HerdHealthStats(
@@ -202,18 +209,21 @@ fun calculateHerdSafety(goats: List<Goat>, allRecords: List<FarmRecord>, today: 
     
     if (activeGoats.isEmpty()) return HerdSafetyStats(0, 100, 0, 100, emptyList(), emptyList())
 
+    val herdRecords = allRecords.filter { it.goatId == null }
+    val hasHerdInsurance = hasActiveInsurance(herdRecords, today)
+
     val insured = adultGoats.count { goat -> 
-        hasActiveInsurance(allRecords.filter { it.goatId == goat.id }, today)
+        hasHerdInsurance || hasActiveInsurance(allRecords.filter { it.goatId == goat.id }, today)
     }
     
     val averageSafety = if (adultGoats.isEmpty()) 100 else (insured.toDouble() / adultGoats.size * 100).toInt()
 
     val expired = adultGoats.filter { goat ->
-        hasExpiredInsurance(allRecords.filter { it.goatId == goat.id }, today)
+        !hasHerdInsurance && hasExpiredInsurance(allRecords.filter { it.goatId == goat.id }, today)
     }.map { it.id }
 
     val missing = adultGoats.filter { goat ->
-        hasNoInsurance(allRecords.filter { it.goatId == goat.id })
+        !hasHerdInsurance && hasNoInsurance(allRecords.filter { it.goatId == goat.id })
     }.map { it.id }
 
     return HerdSafetyStats(

@@ -100,7 +100,7 @@ fun Reports(goats: List<Goat>, records: List<FarmRecord>, share: (String, String
                         )
                         Button(
                             onClick = {
-                                val goatRecords = records.filter { it.goatId == selectedGoat!!.id }
+                                val goatRecords = records.filter { it.goatId == selectedGoat!!.id || it.goatId == null }
                                 val file = generateGoatPDF(context, selectedGoat!!, goatRecords)
                                 share("Goat Record: ${selectedGoat!!.id}", "History and details for goat ${selectedGoat!!.id}.", file)
                             },

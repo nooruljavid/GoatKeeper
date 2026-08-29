@@ -253,7 +253,9 @@ fun GoatRecordsTab(
             items(shown, key = { it.recordId }) { record ->
                 RecordItem(
                     record = record,
-                    goatName = goats.find { it.id == record.goatId }?.let { if (it.name.isBlank()) it.id else it.name } ?: record.goatId,
+                    goatName = record.goatId?.let { gid -> 
+                        goats.find { it.id == gid }?.let { if (it.name.isBlank()) it.id else it.name } ?: gid
+                    } ?: "Entire Herd",
                     onClick = { onEdit(record) }
                 )
             }

@@ -169,7 +169,9 @@ fun Records(
 
             val shown = records.filter { r ->
                 (type == "All" || r.type == type) && 
-                (query.isBlank() || goats.find { it.id == r.goatId }?.let { it.id.contains(query, true) || it.name.contains(query, true) } ?: r.goatId.contains(query, true))
+                (query.isBlank() || r.goatId?.let { gid -> 
+                    goats.find { it.id == gid }?.let { it.id.contains(query, true) || it.name.contains(query, true) } ?: gid.contains(query, true)
+                } ?: "Entire Herd".contains(query, true))
             }
 
             if (shown.isEmpty()) {
@@ -179,7 +181,9 @@ fun Records(
                     items(shown, key = { it.recordId }) { record ->
                         RecordItem(
                             record = record,
-                            goatName = goats.find { it.id == record.goatId }?.name?.ifBlank { record.goatId } ?: record.goatId,
+                            goatName = record.goatId?.let { gid -> 
+                                goats.find { it.id == gid }?.name?.ifBlank { gid } ?: gid
+                            } ?: "Entire Herd",
                             onClick = { onEdit(record) }
                         )
                     }
@@ -203,7 +207,9 @@ fun GlobalRecordsList(
     val recordType = if (type == "Safety") "Insurance" else type
     val shown = records.filter { r ->
         r.type == recordType && 
-        (query.isBlank() || goats.find { it.id == r.goatId }?.let { it.id.contains(query, true) || it.name.contains(query, true) } ?: r.goatId.contains(query, true))
+        (query.isBlank() || r.goatId?.let { gid -> 
+            goats.find { it.id == gid }?.let { it.id.contains(query, true) || it.name.contains(query, true) } ?: gid.contains(query, true)
+        } ?: "Entire Herd".contains(query, true))
     }
     
     Column {
@@ -235,7 +241,9 @@ fun GlobalRecordsList(
                 items(shown, key = { it.recordId }) { record ->
                     RecordItem(
                         record = record,
-                        goatName = goats.find { it.id == record.goatId }?.name?.ifBlank { record.goatId } ?: record.goatId,
+                        goatName = record.goatId?.let { gid -> 
+                            goats.find { it.id == gid }?.name?.ifBlank { gid } ?: gid
+                        } ?: "Entire Herd",
                         onClick = { onEdit(record) }
                     )
                 }

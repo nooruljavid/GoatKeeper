@@ -56,7 +56,7 @@ data class Goat(
 )
 data class FarmRecord(
     @PrimaryKey(autoGenerate = true) val recordId: Long = 0,
-    val goatId: String = "",
+    val goatId: String? = null,
     val type: String = "",
     val date: String = "",
     val dueDate: String = "",
@@ -78,7 +78,7 @@ interface FarmDao {
     @Query("SELECT * FROM goats ORDER BY id") fun goats(): Flow<List<Goat>>
     @Query("SELECT * FROM goats WHERE id = :id LIMIT 1") fun goat(id: String): Flow<Goat?>
     @Query("SELECT * FROM farm_records ORDER BY date DESC") fun records(): Flow<List<FarmRecord>>
-    @Query("SELECT * FROM farm_records WHERE goatId = :goatId ORDER BY date DESC") fun recordsFor(goatId: String): Flow<List<FarmRecord>>
+    @Query("SELECT * FROM farm_records WHERE goatId = :goatId OR goatId IS NULL ORDER BY date DESC") fun recordsFor(goatId: String): Flow<List<FarmRecord>>
     @Query("SELECT * FROM farm_records WHERE dueDate != '' ORDER BY dueDate") fun dueRecords(): Flow<List<FarmRecord>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -115,7 +115,7 @@ interface FarmDao {
     suspend fun updateGoatId(oldId: String, newId: String)
 }
 
-@Database(entities = [Goat::class, FarmRecord::class], version = 7, exportSchema = false)
+@Database(entities = [Goat::class, FarmRecord::class], version = 8, exportSchema = false)
 abstract class FarmDatabase : RoomDatabase() {
     abstract fun dao(): FarmDao
 

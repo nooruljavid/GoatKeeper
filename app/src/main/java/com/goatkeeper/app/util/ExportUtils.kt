@@ -80,7 +80,8 @@ fun generateGoatPDF(context: Context, goat: Goat, records: List<FarmRecord>): Fi
             y = 40f
         }
         
-        canvas.drawText("${formatDate(r.date)} - ${r.type}: ${r.title}", 40f, y, textPaint.apply { isFakeBoldText = true })
+        val prefix = if (r.goatId == null) "[Herd] " else ""
+        canvas.drawText("${formatDate(r.date)} - $prefix${r.type}: ${r.title}", 40f, y, textPaint.apply { isFakeBoldText = true })
         y += 15f
         if (r.details.isNotBlank()) {
             canvas.drawText("Details: ${r.details}", 50f, y, textPaint.apply { isFakeBoldText = false })

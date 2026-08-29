@@ -77,8 +77,10 @@ fun Dashboard(goats: List<Goat>, records: List<FarmRecord>, onOpen: (String) -> 
             items(alerts, key = { it.recordId }) { record ->
                 RecordItem(
                     record = record,
-                    goatName = goats.find { it.id == record.goatId }?.name?.ifBlank { record.goatId } ?: "Unknown",
-                    onClick = { if (record.goatId.isNotBlank()) onOpen(record.goatId) }
+                    goatName = record.goatId?.let { gid -> 
+                        goats.find { it.id == gid }?.name?.ifBlank { gid } ?: gid
+                    } ?: "Entire Herd",
+                    onClick = { record.goatId?.let { onOpen(it) } }
                 )
             }
         }

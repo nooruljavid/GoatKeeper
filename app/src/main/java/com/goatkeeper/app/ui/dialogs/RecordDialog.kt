@@ -32,7 +32,7 @@ fun RecordDialog(
     onSave: (FarmRecord) -> Unit,
     onDelete: ((FarmRecord) -> Unit)? = null
 ) {
-    var goatId by remember(existing?.recordId, initialGoatId) { mutableStateOf(existing?.goatId ?: initialGoatId ?: goats.firstOrNull()?.id.orEmpty()) }
+    var goatId by remember(existing?.recordId, initialGoatId) { mutableStateOf(existing?.goatId ?: initialGoatId) }
     var date by remember(existing?.recordId) { mutableStateOf(existing?.date ?: today) }
     var title by remember(existing?.recordId) { mutableStateOf(existing?.title ?: "") }
     var detail by remember(existing?.recordId) { mutableStateOf(existing?.details ?: "") }
@@ -76,8 +76,8 @@ fun RecordDialog(
     }
 
     LaunchedEffect(goats) {
-        if (goatId.isBlank() && goats.isNotEmpty()) {
-            goatId = goats.first().id
+        if (goatId == null && goats.isNotEmpty() && existing == null && initialGoatId == null) {
+            // No default selection for herd records unless specified
         }
     }
 
@@ -93,10 +93,13 @@ fun RecordDialog(
             ) {
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = goats.find { it.id == goatId }?.let { if (it.name.isBlank()) it.id else "${it.name} (${it.id})" } ?: goatId,
+                        value = when {
+                            goatId == null -> "Entire Herd"
+                            else -> goats.find { it.id == goatId }?.let { if (it.name.isBlank()) it.id else "${it.name} (${it.id})" } ?: goatId!!
+                        },
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Goat *") },
+                        label = { Text("Goat / Group *") },
                         modifier = Modifier.fillMaxWidth(),
                         trailingIcon = { 
                             IconButton(onClick = { showGoatMenu = !showGoatMenu }) {
@@ -116,6 +119,14 @@ fun RecordDialog(
                         onDismissRequest = { showGoatMenu = false },
                         modifier = Modifier.fillMaxWidth(0.8f).heightIn(max = 300.dp)
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Entire Herd", fontWeight = FontWeight.Bold) },
+                            onClick = {
+                                goatId = null
+                                showGoatMenu = false
+                            }
+                        )
+                        HorizontalDivider()
                         goats.forEach { goat ->
                             DropdownMenuItem(
                                 text = { 
@@ -231,7 +242,7 @@ fun RecordDialog(
                     Spacer(Modifier.weight(1f))
                 }
                 TextButton(onClick = onDismiss) { Text("Cancel") }
-                TextButton(enabled = goatId.isNotBlank() && title.isNotBlank(), onClick = {
+                TextButton(enabled = title.isNotBlank(), onClick = {
                     onSave(
                         FarmRecord(
                             recordId = existing?.recordId ?: 0L,

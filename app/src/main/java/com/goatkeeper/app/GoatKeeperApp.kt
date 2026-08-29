@@ -162,14 +162,18 @@ private fun MainAppContent(
     fun saveRecord(record: FarmRecord) {
         scope.launch {
             if (record.recordId == 0L) dao.saveRecord(record) else dao.updateRecord(record)
-            when (record.type) {
-                "Sale" -> dao.updateGoatStatus(record.goatId, "Sold")
-                "Transfer" -> dao.updateGoatStatus(record.goatId, "Transferred")
+            record.goatId?.let { gid ->
+                when (record.type) {
+                    "Sale" -> dao.updateGoatStatus(gid, "Sold")
+                    "Transfer" -> dao.updateGoatStatus(gid, "Transferred")
+                }
             }
             syncManager.uploadToCloud()
 
             if (record.dueDate.isNotBlank()) {
-                val goatName = goats.find { it.id == record.goatId }?.name?.ifBlank { record.goatId } ?: record.goatId
+                val goatName = record.goatId?.let { gid ->
+                    goats.find { it.id == gid }?.name?.ifBlank { gid } ?: gid
+                } ?: "Entire Herd"
                 calendarManager.addReminder(record, goatName)
             }
         }
@@ -189,8 +193,11 @@ private fun MainAppContent(
     fun deleteGoat(goat: Goat) {
         scope.launch {
             dao.deleteGoat(goat)
-            // Use the stable cloud identity, not the editable Goat ID.
-            syncManager.deleteGoatFromCloud(goat.cloudId.ifBlank { goat.id })
+            // Use the stable cloud identity for the document, and tag ID to clean up records.
+            syncManager.deleteGoatFromCloud(
+                cloudId = goat.cloudId.ifBlank { goat.id },
+                tagId = goat.id
+            )
         }
         selectedGoat = null
         editGoat = null
