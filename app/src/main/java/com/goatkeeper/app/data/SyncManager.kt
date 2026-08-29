@@ -98,7 +98,7 @@ class SyncManager(private val dao: FarmDao) {
                 dao.saveRecord(record)
             }
 
-            android.util.Log.d("SyncManager", "Download successful: ${goatSnapshots.size()} goats, ${recordSnapshots.size} records")
+            android.util.Log.d("SyncManager", "Download successful: ${goatSnapshots.size()} goats, ${recordSnapshots.size()} records")
             true
         } catch (e: Exception) {
             android.util.Log.e("SyncManager", "Download failed", e)
