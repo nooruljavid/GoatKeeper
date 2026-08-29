@@ -55,9 +55,10 @@ import java.io.File
 fun GoatKeeperApp(dao: FarmDao, share: (String, String, File?) -> Unit) {
     val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     var user by remember { mutableStateOf(auth.currentUser) }
+    var isSigningOut by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val syncManager = remember(dao) { SyncManager(dao) }
+    val syncManager = remember(dao) { SyncManager(context.applicationContext, dao) }
 
     if (user == null) {
         LoginScreen { newUser ->
@@ -67,31 +68,58 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String, File?) -> Unit) {
             scope.launch { syncManager.syncNow() }
         }
     } else {
-        MainAppContent(dao, share, syncManager, user!!) {
-            scope.launch {
-                // Never clear Room data until the current local state has been pushed.
-                // This is critical for offline edits followed by sign-out.
-                val synced = syncManager.syncNow()
-                if (!synced) {
-                    android.widget.Toast.makeText(
-                        context,
-                        "Could not sync your changes. Connect to the internet before signing out.",
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
-                    return@launch
+        Box(Modifier.fillMaxSize()) {
+            MainAppContent(dao, share, syncManager, user!!) {
+                scope.launch {
+                    isSigningOut = true
+                    // Never clear Room data until the current local state has been pushed.
+                    // This is critical for offline edits followed by sign-out.
+                    val synced = syncManager.syncNow()
+                    if (!synced) {
+                        isSigningOut = false
+                        android.widget.Toast.makeText(
+                            context,
+                            "Could not sync your changes. Connect to the internet before signing out.",
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                        return@launch
+                    }
+
+                    auth.signOut()
+
+                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                        .requestIdToken("39674470741-uj8j4igkp4sgsr3cbh346pptu5td2214.apps.googleusercontent.com")
+                        .requestEmail()
+                        .build()
+                    GoogleSignIn.getClient(context, gso).signOut()
+
+                    dao.clearGoats()
+                    dao.clearRecords()
+                    user = null
+                    isSigningOut = false
                 }
+            }
 
-                auth.signOut()
-
-                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestIdToken("39674470741-uj8j4igkp4sgsr3cbh346pptu5td2214.apps.googleusercontent.com")
-                    .requestEmail()
-                    .build()
-                GoogleSignIn.getClient(context, gso).signOut()
-
-                dao.clearGoats()
-                dao.clearRecords()
-                user = null
+            if (isSigningOut) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = Color.Black.copy(alpha = 0.5f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                CircularProgressIndicator()
+                                Spacer(Modifier.height(16.dp))
+                                Text("Signing out and syncing...", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

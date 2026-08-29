@@ -154,7 +154,7 @@ abstract class FarmDatabase : RoomDatabase() {
                 val callback = object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) {
                         CoroutineScope(Dispatchers.IO).launch {
-                            SyncManager(dao).syncNow()
+                            SyncManager(context, dao).syncNow()
                         }
                     }
                 }

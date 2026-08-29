@@ -1,7 +1,10 @@
 package com.goatkeeper.app.data
 
+import android.content.Context
+import android.net.Uri
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -10,13 +13,14 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 /**
- * Synchronizes the local Room database with Firestore.
+ * Synchronizes the local Room database with Firestore and Firebase Storage.
  *
  * Important: Goat.id is user-editable. cloudId is the stable Firestore document identity,
  * so changing 0001 -> 0002 updates the same cloud document instead of creating a duplicate.
  */
-class SyncManager(private val dao: FarmDao) {
+class SyncManager(private val context: Context, private val dao: FarmDao) {
     private val firestore = FirebaseFirestore.getInstance()
+    private val storage = FirebaseStorage.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
     private fun getUserId() = auth.currentUser?.uid
@@ -35,10 +39,21 @@ class SyncManager(private val dao: FarmDao) {
 
             val goats = dao.goats().first()
             for (goat in goats) {
-                val stableId = goat.cloudId.ifBlank { goat.id }
+                var currentGoat = goat
+
+                // If the photo is local, upload it to Storage first.
+                if (currentGoat.photoUri.startsWith("content://") || currentGoat.photoUri.startsWith("file://")) {
+                    val downloadUrl = uploadImageToStorage(uid, currentGoat.cloudId, Uri.parse(currentGoat.photoUri))
+                    if (downloadUrl != null) {
+                        currentGoat = currentGoat.copy(photoUri = downloadUrl)
+                        dao.saveGoat(currentGoat) // Update local DB with the new cloud URI
+                    }
+                }
+
+                val stableId = currentGoat.cloudId.ifBlank { currentGoat.id }
                 firestore.collection("users").document(uid)
                     .collection("goats").document(stableId)
-                    .set(goat.copy(cloudId = stableId)).await()
+                    .set(currentGoat.copy(cloudId = stableId)).await()
             }
 
             val records = dao.records().first()
@@ -126,6 +141,13 @@ class SyncManager(private val dao: FarmDao) {
             // Delete the goat document
             firestore.collection("users").document(uid)
                 .collection("goats").document(cloudId).delete().await()
+
+            // Delete the goat photo from Storage
+            try {
+                storage.reference.child("users/$uid/goats/$cloudId.jpg").delete().await()
+            } catch (_: Exception) {
+                // Ignore if photo doesn't exist
+            }
         } catch (e: Exception) {
             android.util.Log.e("SyncManager", "Delete goat failed", e)
         }
@@ -138,6 +160,18 @@ class SyncManager(private val dao: FarmDao) {
                 .collection("farm_records").document(id.toString()).delete().await()
         } catch (e: Exception) {
             android.util.Log.e("SyncManager", "Delete record failed", e)
+        }
+    }
+
+    private suspend fun uploadImageToStorage(uid: String, cloudId: String, uri: Uri): String? = withContext(Dispatchers.IO) {
+        try {
+            val ref = storage.reference.child("users/$uid/goats/$cloudId.jpg")
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
+            ref.putStream(inputStream).await()
+            ref.downloadUrl.await().toString()
+        } catch (e: Exception) {
+            android.util.Log.e("SyncManager", "Image upload failed", e)
+            null
         }
     }
 }
