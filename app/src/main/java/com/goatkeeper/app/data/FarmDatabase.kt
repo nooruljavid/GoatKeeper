@@ -73,6 +73,27 @@ data class FarmRecord(
     val kidsAlive: Int? = null
 )
 
+@Entity(tableName = "farm_details")
+data class FarmDetails(
+    @PrimaryKey val id: Int = 0, // Single row entity
+    val farmName: String = "",
+    val country: String = "",
+    val state: String = "",
+    val city: String = "",
+    val district: String = "",
+    val address: String = "",
+    val postalCode: String = "",
+    val contactNo: String = "",
+    val countryCode: String = "",
+    val ownerName: String = ""
+)
+
+@Entity(tableName = "app_settings")
+data class AppSettings(
+    @PrimaryKey val id: Int = 0, // Single row entity
+    val language: String = "en" // "en" or "ta"
+)
+
 @Dao
 interface FarmDao {
     @Query("SELECT * FROM goats ORDER BY id") fun goats(): Flow<List<Goat>>
@@ -113,9 +134,24 @@ interface FarmDao {
 
     @Query("UPDATE goats SET id = :newId WHERE id = :oldId")
     suspend fun updateGoatId(oldId: String, newId: String)
+
+    @Query("SELECT * FROM farm_details WHERE id = 0")
+    fun farmDetails(): Flow<FarmDetails?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveFarmDetails(details: FarmDetails)
+
+    @Query("DELETE FROM farm_details")
+    suspend fun clearFarmDetails()
+
+    @Query("SELECT * FROM app_settings WHERE id = 0")
+    fun appSettings(): Flow<AppSettings?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveAppSettings(settings: AppSettings)
 }
 
-@Database(entities = [Goat::class, FarmRecord::class], version = 8, exportSchema = false)
+@Database(entities = [Goat::class, FarmRecord::class, FarmDetails::class, AppSettings::class], version = 11, exportSchema = false)
 abstract class FarmDatabase : RoomDatabase() {
     abstract fun dao(): FarmDao
 

@@ -19,9 +19,9 @@ import kotlinx.coroutines.withContext
  * so changing 0001 -> 0002 updates the same cloud document instead of creating a duplicate.
  */
 class SyncManager(private val context: Context, private val dao: FarmDao) {
-    private val firestore = FirebaseFirestore.getInstance()
-    private val storage = FirebaseStorage.getInstance()
-    private val auth = FirebaseAuth.getInstance()
+    private val firestore by lazy { FirebaseFirestore.getInstance() }
+    private val storage by lazy { FirebaseStorage.getInstance() }
+    private val auth by lazy { FirebaseAuth.getInstance() }
 
     private fun getUserId() = auth.currentUser?.uid
 
@@ -35,6 +35,12 @@ class SyncManager(private val context: Context, private val dao: FarmDao) {
     private suspend fun uploadToCloudNow(): Boolean = withContext(Dispatchers.IO) {
         val uid = getUserId() ?: return@withContext false
         try {
+            val registeredDetails = dao.farmDetails().first()
+            if (registeredDetails == null) {
+                android.util.Log.d("SyncManager", "Skipping upload: Farm not registered yet")
+                return@withContext true // Not an error, just a policy skip
+            }
+
             android.util.Log.d("SyncManager", "Starting upload")
 
             val goats = dao.goats().first()
@@ -61,6 +67,13 @@ class SyncManager(private val context: Context, private val dao: FarmDao) {
                 firestore.collection("users").document(uid)
                     .collection("farm_records").document(record.recordId.toString())
                     .set(record).await()
+            }
+
+            val details = dao.farmDetails().first()
+            if (details != null) {
+                firestore.collection("users").document(uid)
+                    .collection("settings").document("farm_details")
+                    .set(details).await()
             }
 
             // Do not download until all writes currently issued by this sync are acknowledged.
@@ -111,6 +124,13 @@ class SyncManager(private val context: Context, private val dao: FarmDao) {
             for (snapshot in recordSnapshots.documents) {
                 val record = snapshot.toObject(FarmRecord::class.java) ?: continue
                 dao.saveRecord(record)
+            }
+
+            val detailsSnapshot = firestore.collection("users").document(uid)
+                .collection("settings").document("farm_details").get().await()
+            if (detailsSnapshot.exists()) {
+                val details = detailsSnapshot.toObject(FarmDetails::class.java)
+                if (details != null) dao.saveFarmDetails(details)
             }
 
             android.util.Log.d("SyncManager", "Download successful: ${goatSnapshots.size()} goats, ${recordSnapshots.size()} records")

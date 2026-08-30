@@ -30,6 +30,9 @@ import com.goatkeeper.app.ui.dashboards.HealthDashboard
 import com.goatkeeper.app.ui.dashboards.SafetyDashboard
 import com.goatkeeper.app.util.age
 
+import androidx.compose.ui.res.stringResource
+import com.goatkeeper.app.R
+
 @Composable
 fun Herd(
     goats: List<Goat>,
@@ -54,23 +57,37 @@ fun Herd(
             query,
             onQueryChange,
             Modifier.fillMaxWidth(),
-            label = { Text("Search ID, name, or breed") },
+            label = { Text(stringResource(R.string.search_placeholder)) },
             leadingIcon = { Icon(Icons.Default.Search, null) }
         )
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = filterGender == "Female", onClick = { onGenderChange(if (filterGender == "Female") "All" else "Female") }, label = { Text("♀ Female") })
-            FilterChip(selected = filterGender == "Male", onClick = { onGenderChange(if (filterGender == "Male") "All" else "Male") }, label = { Text("♂ Male") })
+            FilterChip(selected = filterGender == "Female", onClick = { onGenderChange(if (filterGender == "Female") "All" else "Female") }, label = { Text("♀ " + stringResource(R.string.female)) })
+            FilterChip(selected = filterGender == "Male", onClick = { onGenderChange(if (filterGender == "Male") "All" else "Male") }, label = { Text("♂ " + stringResource(R.string.male)) })
             Box {
-                AssistChip(onClick = { showStatusMenu = true }, label = { Text("Status: $filterStatus") }, trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) })
+                val statusText = when(filterStatus) {
+                    "Active" -> stringResource(R.string.active)
+                    "Sold" -> stringResource(R.string.sold)
+                    "Deceased" -> stringResource(R.string.deceased)
+                    "Transferred" -> stringResource(R.string.transferred)
+                    else -> stringResource(R.string.all)
+                }
+                AssistChip(onClick = { showStatusMenu = true }, label = { Text(stringResource(R.string.status_label, statusText)) }, trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) })
                 DropdownMenu(expanded = showStatusMenu, onDismissRequest = { showStatusMenu = false }) {
                     listOf("All", "Active", "Sold", "Deceased", "Transferred").forEach { status ->
-                        DropdownMenuItem(text = { Text(status) }, onClick = { onStatusChange(status); showStatusMenu = false })
+                        val label = when(status) {
+                            "Active" -> stringResource(R.string.active)
+                            "Sold" -> stringResource(R.string.sold)
+                            "Deceased" -> stringResource(R.string.deceased)
+                            "Transferred" -> stringResource(R.string.transferred)
+                            else -> stringResource(R.string.all)
+                        }
+                        DropdownMenuItem(text = { Text(label) }, onClick = { onStatusChange(status); showStatusMenu = false })
                     }
                 }
             }
         }
         if (shown.isEmpty()) {
-            Empty("No goats match your filters.")
+            Empty(stringResource(R.string.no_goats_match))
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(shown, key = { it.id }) { GoatCard(it, onOpen) }
@@ -105,7 +122,8 @@ fun GoatCard(goat: Goat, open: (String) -> Unit) = Card(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(if (goat.name.isBlank()) goat.id else "${goat.name} · ${goat.id}", fontWeight = FontWeight.Bold)
-            Text("${goat.breed} · ${goat.gender} · ${age(goat.dateOfBirth)}", style = MaterialTheme.typography.bodySmall)
+            val genderLabel = if (goat.gender == "Female") stringResource(R.string.female) else stringResource(R.string.male)
+            Text("${goat.breed} · $genderLabel · ${age(goat.dateOfBirth)}", style = MaterialTheme.typography.bodySmall)
         }
         val statusColor = when (goat.status) {
             "Active" -> Color(0xFF10B981)
@@ -113,7 +131,14 @@ fun GoatCard(goat: Goat, open: (String) -> Unit) = Card(
             "Deceased" -> Color(0xFFEF4444)
             else -> Color(0xFF6B7280)
         }
-        AssistChip(onClick = { }, label = { Text(goat.status, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 11.sp) })
+        val statusLabel = when(goat.status) {
+            "Active" -> stringResource(R.string.active)
+            "Sold" -> stringResource(R.string.sold)
+            "Deceased" -> stringResource(R.string.deceased)
+            "Transferred" -> stringResource(R.string.transferred)
+            else -> goat.status
+        }
+        AssistChip(onClick = { }, label = { Text(statusLabel, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 11.sp) })
     }
 }
 
@@ -136,7 +161,18 @@ fun Records(
     val types = listOf("All", "Health", "Breeding", "Safety", "Sale", "Transfer")
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         ScrollableTabRow(selectedTabIndex = types.indexOf(type), edgePadding = 0.dp) {
-            types.forEach { Tab(type == it, { onTypeChange(it) }, text = { Text(it) }) }
+            types.forEach { t -> 
+                val label = when(t) {
+                    "All" -> stringResource(R.string.all)
+                    "Health" -> stringResource(R.string.health)
+                    "Breeding" -> stringResource(R.string.breeding)
+                    "Safety" -> stringResource(R.string.safety)
+                    "Sale" -> stringResource(R.string.sale)
+                    "Transfer" -> stringResource(R.string.transfer)
+                    else -> t
+                }
+                Tab(type == t, { onTypeChange(t) }, text = { Text(label) }) 
+            }
         }
         Spacer(Modifier.height(8.dp))
 
@@ -157,13 +193,21 @@ fun Records(
                 value = query,
                 onValueChange = onQueryChange,
                 Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                label = { Text("Search Goat ID or Name") },
+                label = { Text(stringResource(R.string.search_records_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, null) }
             )
 
             if (type != "All") {
+                val typeLabel = when(type) {
+                    "Health" -> stringResource(R.string.health)
+                    "Breeding" -> stringResource(R.string.breeding)
+                    "Safety" -> stringResource(R.string.safety)
+                    "Sale" -> stringResource(R.string.sale)
+                    "Transfer" -> stringResource(R.string.transfer)
+                    else -> type
+                }
                 FilledTonalButton(onClick = { onAdd(type) }, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                    Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text("Add $type Record")
+                    Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.add_record_btn, typeLabel))
                 }
             }
 
@@ -175,7 +219,15 @@ fun Records(
             }
 
             if (shown.isEmpty()) {
-                Empty("No $type records yet.")
+                val typeLabel = when(type) {
+                    "Health" -> stringResource(R.string.health)
+                    "Breeding" -> stringResource(R.string.breeding)
+                    "Safety" -> stringResource(R.string.safety)
+                    "Sale" -> stringResource(R.string.sale)
+                    "Transfer" -> stringResource(R.string.transfer)
+                    else -> stringResource(R.string.all)
+                }
+                Empty(stringResource(R.string.no_records_yet, typeLabel))
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(shown, key = { it.recordId }) { record ->
@@ -183,7 +235,7 @@ fun Records(
                             record = record,
                             goatName = record.goatId?.let { gid -> 
                                 goats.find { it.id == gid }?.name?.ifBlank { gid } ?: gid
-                            } ?: "Entire Herd",
+                            } ?: stringResource(R.string.entire_herd),
                             onClick = { onEdit(record) }
                         )
                     }
@@ -217,7 +269,7 @@ fun GlobalRecordsList(
             TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Back to Dashboard")
+                Text(stringResource(R.string.back_to_dashboard))
             }
             Spacer(Modifier.weight(1f))
         }
@@ -226,16 +278,20 @@ fun GlobalRecordsList(
             value = query,
             onValueChange = onQueryChange,
             Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            label = { Text("Search Goat ID or Name") },
+            label = { Text(stringResource(R.string.search_records_placeholder)) },
             leadingIcon = { Icon(Icons.Default.Search, null) }
         )
         
+        val typeLabel = when(type) {
+            "Safety" -> stringResource(R.string.safety)
+            else -> type
+        }
         FilledTonalButton(onClick = { onAdd(recordType) }, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-            Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text("Add $type Record")
+            Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.add_record_btn, typeLabel))
         }
         
         if (shown.isEmpty()) {
-            Empty("No $type records matching search.")
+            Empty(stringResource(R.string.no_records_yet, typeLabel))
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(shown, key = { it.recordId }) { record ->
@@ -243,7 +299,7 @@ fun GlobalRecordsList(
                         record = record,
                         goatName = record.goatId?.let { gid -> 
                             goats.find { it.id == gid }?.name?.ifBlank { gid } ?: gid
-                        } ?: "Entire Herd",
+                        } ?: stringResource(R.string.entire_herd),
                         onClick = { onEdit(record) }
                     )
                 }

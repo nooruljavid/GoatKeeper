@@ -10,7 +10,14 @@
         android:label="GoatKeeper"
         android:theme="@style/Theme.GoatKeeper"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round">
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:localeConfig="@xml/locales_config">
+
+        <!-- Fix for AppCompat 1.6.1+ NPE in isAutoStorageOptedIn -->
+        <meta-data
+            android:name="androidx.appcompat.app.AppCompatDelegate.DISABLE_LOCALE_STORAGE"
+            android:value="true" />
+
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -27,5 +34,17 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="androidx.appcompat.app.AppLocalesMetadataHolderService" />
+            </intent-filter>
+            <meta-data
+                android:name="autoStorageOptIn"
+                android:value="true" />
+        </service>
     </application>
 </manifest>

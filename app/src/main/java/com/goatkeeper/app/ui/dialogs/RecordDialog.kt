@@ -20,6 +20,9 @@ import com.goatkeeper.app.util.kiddingDate
 import com.goatkeeper.app.util.nextDewormingDate
 import com.goatkeeper.app.util.today
 
+import androidx.compose.ui.res.stringResource
+import com.goatkeeper.app.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecordDialog(
@@ -81,9 +84,18 @@ fun RecordDialog(
         }
     }
 
+    val typeLabel = when(type) {
+        "Health" -> stringResource(R.string.health)
+        "Breeding" -> stringResource(R.string.breeding)
+        "Safety", "Insurance" -> stringResource(R.string.safety)
+        "Sale" -> stringResource(R.string.sale)
+        "Transfer" -> stringResource(R.string.transfer)
+        else -> type
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (existing == null) "Add $type Record" else "Edit $type Record", fontWeight = FontWeight.Bold) },
+        title = { Text(if (existing == null) stringResource(R.string.add_record_title, typeLabel) else stringResource(R.string.edit_record_title, typeLabel), fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier
@@ -94,12 +106,12 @@ fun RecordDialog(
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = when {
-                            goatId == null -> "Entire Herd"
+                            goatId == null -> stringResource(R.string.entire_herd)
                             else -> goats.find { it.id == goatId }?.let { if (it.name.isBlank()) it.id else "${it.name} (${it.id})" } ?: goatId!!
                         },
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Goat / Group *") },
+                        label = { Text(stringResource(R.string.goat_group_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         trailingIcon = { 
                             IconButton(onClick = { showGoatMenu = !showGoatMenu }) {
@@ -120,7 +132,7 @@ fun RecordDialog(
                         modifier = Modifier.fillMaxWidth(0.8f).heightIn(max = 300.dp)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Entire Herd", fontWeight = FontWeight.Bold) },
+                            text = { Text(stringResource(R.string.entire_herd), fontWeight = FontWeight.Bold) },
                             onClick = {
                                 goatId = null
                                 showGoatMenu = false
@@ -144,11 +156,11 @@ fun RecordDialog(
                     }
                 }
                 
-                DatePickerField("Record Date *", date, { date = it })
+                DatePickerField(stringResource(R.string.record_date_req), date, { date = it })
                 
                 if (type == "Health") {
                     Box(modifier = Modifier.fillMaxWidth()) {
-                        Field("Health Event (Deworming/Vaccination) *", title, change = { 
+                        Field(stringResource(R.string.health_event_label), title, change = { 
                             title = it
                             showTitleMenu = true
                         })
@@ -159,8 +171,13 @@ fun RecordDialog(
                             properties = androidx.compose.ui.window.PopupProperties(focusable = false)
                         ) {
                             healthOptions.forEach { option ->
+                                val label = when(option) {
+                                    "Deworming" -> stringResource(R.string.deworming)
+                                    "Vaccination" -> stringResource(R.string.vaccination)
+                                    else -> option
+                                }
                                 DropdownMenuItem(
-                                    text = { Text(option) },
+                                    text = { Text(label) },
                                     onClick = {
                                         title = option
                                         showTitleMenu = false
@@ -170,47 +187,53 @@ fun RecordDialog(
                         }
                     }
                 } else {
-                    SuggestionField("Title / Description *", title, titleSuggestions) { title = it }
+                    SuggestionField(stringResource(R.string.title_desc_req), title, titleSuggestions) { title = it }
                 }
 
                 when (type) {
                     "Health" -> {
-                        SuggestionField("Veterinarian", party, suggestions) { party = it }
-                        DatePickerField("Next Due Date", due, { due = it })
-                        Field("Cost", amount) { amount = it }
+                        SuggestionField(stringResource(R.string.veterinarian_label), party, suggestions) { party = it }
+                        DatePickerField(stringResource(R.string.next_due_date_label), due, { due = it })
+                        Field(stringResource(R.string.cost_label), amount) { amount = it }
                     }
                     "Breeding" -> {
-                        Field("Sire ID", sireId) { sireId = it }
-                        Text("Expected Kidding: ${kiddingDate(date)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                        DatePickerField("Actual Kidding Date", actualDate, { actualDate = it })
+                        Field(stringResource(R.string.sire_id_label), sireId) { sireId = it }
+                        Text(stringResource(R.string.expected_kidding_label, kiddingDate(date)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        DatePickerField(stringResource(R.string.actual_kidding_date_label), actualDate, { actualDate = it })
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Field("Kids Born", kidsCount, Modifier.weight(1f)) { kidsCount = it }
-                            Field("Kids Alive", kidsAlive, Modifier.weight(1f)) { kidsAlive = it }
+                            Field(stringResource(R.string.kids_born_label), kidsCount, Modifier.weight(1f)) { kidsCount = it }
+                            Field(stringResource(R.string.kids_alive_label), kidsAlive, Modifier.weight(1f)) { kidsAlive = it }
                         }
                     }
                     "Insurance" -> {
-                        SuggestionField("Insurer", party, suggestions) { party = it }
-                        Field("Policy Number", detail) { detail = it }
-                        DatePickerField("Expiry Date *", due, { due = it })
-                        Field("Coverage Amount", amount) { amount = it }
+                        SuggestionField(stringResource(R.string.insurer_label), party, suggestions) { party = it }
+                        Field(stringResource(R.string.policy_number_label), detail) { detail = it }
+                        DatePickerField(stringResource(R.string.expiry_date_req), due, { due = it })
+                        Field(stringResource(R.string.coverage_amount_label), amount) { amount = it }
                     }
                     "Sale" -> {
-                        SuggestionField("Buyer", party, suggestions) { party = it }
+                        SuggestionField(stringResource(R.string.buyer_label), party, suggestions) { party = it }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Field("Quantity", quantity, Modifier.weight(1f)) { quantity = it }
-                            Field("Unit (kg, L)", unit, Modifier.weight(1f)) { unit = it }
+                            Field(stringResource(R.string.quantity_label), quantity, Modifier.weight(1f)) { quantity = it }
+                            Field(stringResource(R.string.unit_kg_l_label), unit, Modifier.weight(1f)) { unit = it }
                         }
-                        Field("Price", amount) { amount = it }
-                        Text("Payment Status", style = MaterialTheme.typography.labelMedium)
+                        Field(stringResource(R.string.price_label), amount) { amount = it }
+                        Text(stringResource(R.string.payment_status_label), style = MaterialTheme.typography.labelMedium)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("Paid", "Pending", "Partial").forEach { statusValue ->
-                                FilterChip(selected = payment == statusValue, onClick = { payment = statusValue }, label = { Text(statusValue) }, modifier = Modifier.weight(1f))
+                                val label = when(statusValue) {
+                                    "Paid" -> stringResource(R.string.paid)
+                                    "Pending" -> stringResource(R.string.pending)
+                                    "Partial" -> stringResource(R.string.partial)
+                                    else -> statusValue
+                                }
+                                FilterChip(selected = payment == statusValue, onClick = { payment = statusValue }, label = { Text(label) }, modifier = Modifier.weight(1f))
                             }
                         }
                     }
                     "Transfer" -> {
-                        SuggestionField("New Owner / Farm", party, suggestions) { party = it }
-                        Field("Reason", detail) { detail = it }
+                        SuggestionField(stringResource(R.string.new_owner_farm_label), party, suggestions) { party = it }
+                        Field(stringResource(R.string.reason_label), detail) { detail = it }
                     }
                 }
 
@@ -218,7 +241,7 @@ fun RecordDialog(
                     OutlinedTextField(
                         value = detail,
                         onValueChange = { detail = it },
-                        label = { Text("Additional Details") },
+                        label = { Text(stringResource(R.string.additional_details_label)) },
                         modifier = Modifier.fillMaxWidth().height(80.dp)
                     )
                 }
@@ -237,11 +260,11 @@ fun RecordDialog(
                     ) {
                         Icon(Icons.Default.Delete, null)
                         Spacer(Modifier.width(4.dp))
-                        Text("Delete")
+                        Text(stringResource(R.string.delete_btn))
                     }
                     Spacer(Modifier.weight(1f))
                 }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                 TextButton(enabled = title.isNotBlank(), onClick = {
                     onSave(
                         FarmRecord(
@@ -263,7 +286,7 @@ fun RecordDialog(
                             kidsAlive = kidsAlive.toIntOrNull()
                         )
                     )
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.save)) }
             }
         },
         dismissButton = {}

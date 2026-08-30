@@ -23,6 +23,9 @@ import com.goatkeeper.app.ui.components.Empty
 import com.goatkeeper.app.ui.components.RecordItem
 import com.goatkeeper.app.util.*
 
+import androidx.compose.ui.res.stringResource
+import com.goatkeeper.app.R
+
 @Composable
 fun GoatProfile(
     id: String,
@@ -46,10 +49,18 @@ fun GoatProfile(
             divider = {}
         ) {
             tabs.forEach { tab ->
+                val label = when(tab) {
+                    "Info" -> stringResource(R.string.info_tab)
+                    "Health" -> stringResource(R.string.health_tab_label)
+                    "Breeding" -> stringResource(R.string.breeding_tab_label)
+                    "Safety" -> stringResource(R.string.safety_tab_label)
+                    "Sales" -> stringResource(R.string.sales_tab_label)
+                    else -> tab
+                }
                 Tab(
                     selected = activeTab == tab,
                     onClick = { activeTab = tab },
-                    text = { Text(tab) }
+                    text = { Text(label) }
                 )
             }
         }
@@ -90,28 +101,35 @@ fun GoatInfoTab(
                     Column(Modifier.padding(16.dp).fillMaxWidth()) {
                         Text(if (g.name.isBlank()) g.id else "${g.name} (${g.id})", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                        InfoRow("Breed", g.breed)
-                        InfoRow("Gender", g.gender)
-                        InfoRow("Age", age(g.dateOfBirth))
-                        InfoRow("Born", formatDate(g.dateOfBirth))
-                        InfoRow("Status", g.status)
-                        InfoRow("Health", "${calculateHealthStatus(g, records, today)}%")
-                        InfoRow("Insurance", calculateInsuranceStatus(records, today))
-                        if (g.colorMarkings.isNotBlank()) InfoRow("Color / Markings", g.colorMarkings)
-                        if (g.microchipId.isNotBlank()) InfoRow("Microchip", g.microchipId)
+                        InfoRow(stringResource(R.string.breed_req).removeSuffix(" *"), g.breed)
+                        InfoRow(stringResource(R.string.gender_label), if (g.gender == "Female") stringResource(R.string.female) else stringResource(R.string.male))
+                        InfoRow(stringResource(R.string.age_label), age(g.dateOfBirth))
+                        InfoRow(stringResource(R.string.born_label), formatDate(g.dateOfBirth))
+                        val statusLabel = when(g.status) {
+                            "Active" -> stringResource(R.string.active)
+                            "Sold" -> stringResource(R.string.sold)
+                            "Deceased" -> stringResource(R.string.deceased)
+                            "Transferred" -> stringResource(R.string.transferred)
+                            else -> g.status
+                        }
+                        InfoRow(stringResource(R.string.status_label_field), statusLabel)
+                        InfoRow(stringResource(R.string.health_tab_label), "${calculateHealthStatus(g, records, today)}%")
+                        InfoRow(stringResource(R.string.insurance), calculateInsuranceStatus(records, today))
+                        if (g.colorMarkings.isNotBlank()) InfoRow(stringResource(R.string.color_markings_label), g.colorMarkings)
+                        if (g.microchipId.isNotBlank()) InfoRow(stringResource(R.string.microchip_id_label).removeSuffix(" ID"), g.microchipId)
                     }
                 }
             }
 
             item {
-                Text("Family Tree / Pedigree", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                Text(stringResource(R.string.family_tree_label), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
                 FamilyTree(g, allGoats)
             }
 
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { onEdit(g) }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.Edit, null); Spacer(Modifier.width(6.dp)); Text("Edit Goat")
+                        Icon(Icons.Default.Edit, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.edit_goat_btn))
                     }
                     OutlinedButton(
                         onClick = { onDelete(g) },
@@ -120,13 +138,13 @@ fun GoatInfoTab(
                     ) {
                         Icon(Icons.Default.Delete, null)
                         Spacer(Modifier.width(6.dp))
-                        Text("Delete Goat")
+                        Text(stringResource(R.string.delete_goat_btn))
                     }
                 }
             }
             if (g.notes.isNotBlank()) {
                 item {
-                    Text("Notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.notes_label), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Card(modifier = Modifier.fillMaxWidth()) { Text(g.notes, modifier = Modifier.padding(16.dp)) }
                 }
             }
@@ -152,14 +170,14 @@ fun FamilyTree(goat: Goat, allGoats: List<Goat>) {
                 id = goat.damId,
                 name = dam?.name ?: "",
                 breed = dam?.breed ?: "Unknown",
-                role = "Dam (Mother)",
+                role = stringResource(R.string.dam_mother_label),
                 color = Color(0xFFFCE7F3) // Light Pink
             )
             FamilyTreeNode(
                 id = goat.sireId,
                 name = sire?.name ?: "",
                 breed = sire?.breed ?: "Unknown",
-                role = "Sire (Father)",
+                role = stringResource(R.string.sire_father_label),
                 color = Color(0xFFDBEAFE) // Light Blue
             )
         }
@@ -187,7 +205,7 @@ fun FamilyTree(goat: Goat, allGoats: List<Goat>) {
             id = goat.id,
             name = goat.name,
             breed = goat.breed,
-            role = "This Goat",
+            role = stringResource(R.string.this_goat_label),
             color = Color(0xFFD1FAE5) // Light Green
         )
     }
@@ -195,13 +213,13 @@ fun FamilyTree(goat: Goat, allGoats: List<Goat>) {
 
 @Composable
 fun FamilyTreeNode(id: String, name: String, breed: String, role: String, color: Color) {
-    if (id.isBlank() && role != "This Goat") {
+    if (id.isBlank() && role != stringResource(R.string.this_goat_label)) {
         Card(
             modifier = Modifier.width(160.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
             Box(Modifier.padding(12.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("$role\nNot Recorded", style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text("$role\n" + stringResource(R.string.not_recorded_label), style = MaterialTheme.typography.labelSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
     } else {
@@ -240,22 +258,30 @@ fun GoatRecordsTab(
         "Safety" -> "Insurance"
         else -> type
     }
+    val typeLabel = when(type) {
+        "Info" -> stringResource(R.string.info_tab)
+        "Health" -> stringResource(R.string.health_tab_label)
+        "Breeding" -> stringResource(R.string.breeding_tab_label)
+        "Safety" -> stringResource(R.string.safety_tab_label)
+        "Sales" -> stringResource(R.string.sales_tab_label)
+        else -> type
+    }
     val shown = records.filter { it.type == recordType }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Button(onClick = { onAdd(recordType) }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Add $recordType Record")
+                Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.add_record_title, typeLabel))
             }
         }
         if (shown.isEmpty()) {
-            item { Empty("No $recordType records for this goat.") }
+            item { Empty(stringResource(R.string.no_records_for_goat, typeLabel)) }
         } else {
             items(shown, key = { it.recordId }) { record ->
                 RecordItem(
                     record = record,
                     goatName = record.goatId?.let { gid -> 
                         goats.find { it.id == gid }?.let { if (it.name.isBlank()) it.id else it.name } ?: gid
-                    } ?: "Entire Herd",
+                    } ?: stringResource(R.string.entire_herd),
                     onClick = { onEdit(record) }
                 )
             }

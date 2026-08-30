@@ -1,0 +1,169 @@
+<resources>
+    <string name="app_name">GoatKeeper</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="herd">Herd</string>
+    <string name="records">Records</string>
+    <string name="reports">Reports</string>
+    <string name="settings">Settings</string>
+    <string name="farm_registry">Farm Registry</string>
+    <string name="sign_in">Sign In</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="language">Language</string>
+    <string name="english">English</string>
+    <string name="tamil">Tamil</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
+    <string name="close">Close</string>
+    <string name="register">Register</string>
+    <string name="goat_profile">Goat Profile</string>
+
+    <string name="search_placeholder">Search ID, name, or breed</string>
+    <string name="female">Female</string>
+    <string name="male">Male</string>
+    <string name="status_label">Status: %s</string>
+    <string name="no_goats_match">No goats match your filters.</string>
+    <string name="all">All</string>
+    <string name="health">Health</string>
+    <string name="breeding">Breeding</string>
+    <string name="safety">Safety</string>
+    <string name="sale">Sale</string>
+    <string name="transfer">Transfer</string>
+    <string name="global_records">Global Records</string>
+    <string name="search_records_placeholder">Search Goat ID or Name</string>
+    <string name="add_record_btn">Add %s Record</string>
+    <string name="entire_herd">Entire Herd</string>
+    <string name="no_records_yet">No %s records yet.</string>
+    <string name="back_to_dashboard">Back to Dashboard</string>
+    <string name="active">Active</string>
+    <string name="sold">Sold</string>
+    <string name="deceased">Deceased</string>
+    <string name="transferred">Transferred</string>
+
+    <string name="farm_glance">Your farm at a glance</string>
+    <string name="total_goats">Total Goats</string>
+    <string name="babies">Babies</string>
+    <string name="upcoming_alerts">Upcoming alerts</string>
+    <string name="no_upcoming_alerts">No upcoming alerts in the next 7 days. ✅</string>
+    <string name="recent_goats">Recent Goats</string>
+    <string name="overall_safety">Overall Herd Safety</string>
+    <string name="overall_health">Overall Herd Health</string>
+    <string name="deworming">Deworming</string>
+    <string name="vaccination">Vaccination</string>
+    <string name="insurance">Insurance</string>
+    <string name="safety_alerts_count">Safety Alerts (%d)</string>
+    <string name="due_deworming_count">Due for Deworming (%d)</string>
+    <string name="due_vaccination_count">Due for Vaccination (%d)</string>
+    <string name="health_summary">Health Summary</string>
+    <string name="safety_summary">Safety Summary</string>
+    <string name="all_protected">All goats are protected! ✅</string>
+    <string name="all_healthy">All goats are up to date! ✅</string>
+    <string name="no_record_found">No Record Found</string>
+    <string name="policy_expired">Policy Expired</string>
+    <string name="due_exceeded">Due Exceeded</string>
+    <string name="needs_attention">Needs Attention</string>
+    <string name="due_label">Due</string>
+    <string name="needs_attention_count">%d Needs Attention</string>
+    <string name="due_count_label">%d Due</string>
+
+    <string name="paid">Paid</string>
+    <string name="pending">Pending</string>
+    <string name="partial">Partial</string>
+
+    <string name="herd_insured_desc">Your adult herd is %d%% insured.</string>
+    <string name="expired_insurance_desc">• %d goats have expired insurance.</string>
+    <string name="missing_insurance_desc">• %d goats have no insurance record.</string>
+    <string name="herd_health_desc">Your herd (adults) is %d%% healthy based on records.</string>
+    <string name="need_deworming_desc">• %d goats need deworming.</string>
+    <string name="need_vaccination_desc">• %d goats need vaccination.</string>
+
+    <!-- Goat Dialog -->
+    <string name="goat_photo">Goat Photo</string>
+    <string name="photo_source_desc">Choose a photo source for your goat.</string>
+    <string name="camera">Camera</string>
+    <string name="gallery">Gallery</string>
+    <string name="register_goat">Register Goat</string>
+    <string name="edit_goat">Edit Goat</string>
+    <string name="add_photo">Add Photo</string>
+    <string name="goat_id_req">Goat ID *</string>
+    <string name="name_label">Name</string>
+    <string name="breed_req">Breed *</string>
+    <string name="dob_req">Date of Birth *</string>
+    <string name="gender_label">Gender</string>
+    <string name="status_label_field">Status</string>
+    <string name="dam_id_label">Dam ID</string>
+    <string name="sire_id_label">Sire ID</string>
+    <string name="color_markings_label">Color / Markings</string>
+    <string name="microchip_id_label">Microchip ID</string>
+    <string name="notes_label">Notes</string>
+    <string name="delete_btn">Delete</string>
+
+    <!-- Record Dialog -->
+    <string name="add_record_title">Add %s Record</string>
+    <string name="edit_record_title">Edit %s Record</string>
+    <string name="goat_group_label">Goat / Group *</string>
+    <string name="record_date_req">Record Date *</string>
+    <string name="health_event_label">Health Event (Deworming/Vaccination) *</string>
+    <string name="title_desc_req">Title / Description *</string>
+    <string name="veterinarian_label">Veterinarian</string>
+    <string name="next_due_date_label">Next Due Date</string>
+    <string name="cost_label">Cost</string>
+    <string name="expected_kidding_label">Expected Kidding: %s</string>
+    <string name="actual_kidding_date_label">Actual Kidding Date</string>
+    <string name="kids_born_label">Kids Born</string>
+    <string name="kids_alive_label">Kids Alive</string>
+    <string name="insurer_label">Insurer</string>
+    <string name="policy_number_label">Policy Number</string>
+    <string name="expiry_date_req">Expiry Date *</string>
+    <string name="coverage_amount_label">Coverage Amount</string>
+    <string name="buyer_label">Buyer</string>
+    <string name="quantity_label">Quantity</string>
+    <string name="unit_kg_l_label">Unit (kg, L)</string>
+    <string name="price_label">Price</string>
+    <string name="payment_status_label">Payment Status</string>
+    <string name="new_owner_farm_label">New Owner / Farm</string>
+    <string name="reason_label">Reason</string>
+    <string name="additional_details_label">Additional Details</string>
+    <string name="verify_register_btn">Verify &amp; Register</string>
+
+    <!-- Goat Profile -->
+    <string name="info_tab">Info</string>
+    <string name="health_tab_label">Health</string>
+    <string name="breeding_tab_label">Breeding</string>
+    <string name="safety_tab_label">Safety</string>
+    <string name="sales_tab_label">Sales</string>
+    <string name="age_label">Age</string>
+    <string name="born_label">Born</string>
+    <string name="family_tree_label">Family Tree / Pedigree</string>
+    <string name="edit_goat_btn">Edit Goat</string>
+    <string name="delete_goat_btn">Delete Goat</string>
+    <string name="dam_mother_label">Dam (Mother)</string>
+    <string name="sire_father_label">Sire (Father)</string>
+    <string name="this_goat_label">This Goat</string>
+    <string name="not_recorded_label">Not Recorded</string>
+    <string name="no_records_for_goat">No %s records for this goat.</string>
+
+    <!-- Farm Details -->
+    <string name="verify_phone_title">Verify Phone Number</string>
+    <string name="otp_sent_desc">We\'ve sent a 6-digit verification code to %s. Please enter it below to complete registration.</string>
+    <string name="otp_code_label">6-Digit Code</string>
+    <string name="resend_code_btn">Didn\'t receive code? Resend</string>
+    <string name="farm_name_req">Farm Name *</string>
+    <string name="farm_owner_name_req">Farm Owner Name *</string>
+    <string name="country_req">Country *</string>
+    <string name="state_req">State *</string>
+    <string name="district_req">District *</string>
+    <string name="state_province_label">State / Province</string>
+    <string name="city_label">City</string>
+    <string name="address_label">Address</string>
+    <string name="code_label_field">Code</string>
+    <string name="contact_no_req">Contact No *</string>
+    <string name="send_otp_btn">Send OTP</string>
+    <string name="edit_registry_btn">Edit Registry</string>
+    <string name="ok">OK</string>
+
+    <!-- Login -->
+    <string name="secure_herd_mgmt">Secure Herd Management</string>
+    <string name="sign_in_google">Sign in with Google</string>
+    <string name="sync_desc">Your data will be automatically synced to your Google Account.</string>
+</resources>

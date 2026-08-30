@@ -1,0 +1,169 @@
+<resources>
+    <string name="app_name">கோட்கீப்பர் (GoatKeeper)</string>
+    <string name="dashboard">முகப்பு (Dashboard)</string>
+    <string name="herd">மந்தை (Herd)</string>
+    <string name="records">பதிவுகள் (Records)</string>
+    <string name="reports">அறிக்கைகள் (Reports)</string>
+    <string name="settings">அமைப்புகள் (Settings)</string>
+    <string name="farm_registry">பண்ணை பதிவு (Farm Registry)</string>
+    <string name="sign_in">உள்நுழை (Sign In)</string>
+    <string name="sign_out">வெளியேறு (Sign Out)</string>
+    <string name="language">மொழி (Language)</string>
+    <string name="english">ஆங்கிலம் (English)</string>
+    <string name="tamil">தமிழ் (Tamil)</string>
+    <string name="save">சேமி (Save)</string>
+    <string name="cancel">ரத்து (Cancel)</string>
+    <string name="back">பின்செல் (Back)</string>
+    <string name="close">மூடு (Close)</string>
+    <string name="register">பதிவு செய்</string>
+    <string name="goat_profile">ஆடு சுயவிவரம் (Goat Profile)</string>
+
+    <string name="search_placeholder">ஐடி, பெயர் அல்லது இனத்தைத் தேடு</string>
+    <string name="female">பெண்</string>
+    <string name="male">ஆண்</string>
+    <string name="status_label">நிலை: %s</string>
+    <string name="no_goats_match">உங்கள் வடிப்பான்களுக்கு ஆடுகள் எதுவும் பொருந்தவில்லை.</string>
+    <string name="all">அனைத்தும்</string>
+    <string name="health">சுகாதாரம்</string>
+    <string name="breeding">இனப்பெருக்கம்</string>
+    <string name="safety">பாதுகாப்பு</string>
+    <string name="sale">விற்பனை</string>
+    <string name="transfer">மாற்றம்</string>
+    <string name="global_records">பொதுப் பதிவுகள்</string>
+    <string name="search_records_placeholder">ஆடு ஐடி அல்லது பெயரைத் தேடு</string>
+    <string name="add_record_btn">%s பதிவைச் சேர்</string>
+    <string name="entire_herd">முழு மந்தை</string>
+    <string name="no_records_yet">%s பதிவுகள் இன்னும் இல்லை.</string>
+    <string name="back_to_dashboard">முகப்பிற்குத் திரும்பு</string>
+    <string name="active">செயலில் உள்ளது</string>
+    <string name="sold">விற்கப்பட்டது</string>
+    <string name="deceased">இறந்தது</string>
+    <string name="transferred">மாற்றப்பட்டது</string>
+
+    <string name="farm_glance">உங்கள் பண்ணை ஒரு பார்வையில்</string>
+    <string name="total_goats">மொத்த ஆடுகள்</string>
+    <string name="babies">குட்டிகள்</string>
+    <string name="upcoming_alerts">வரவிருக்கும் விழிப்பூட்டல்கள்</string>
+    <string name="no_upcoming_alerts">அடுத்த 7 நாட்களில் விழிப்பூட்டல்கள் எதுவும் இல்லை. ✅</string>
+    <string name="recent_goats">சமீபத்திய ஆடுகள்</string>
+    <string name="overall_safety">ஒட்டுமொத்த மந்தை பாதுகாப்பு</string>
+    <string name="overall_health">ஒட்டுமொத்த மந்தை ஆரோக்கியம்</string>
+    <string name="deworming">குடற்புழு நீக்கம்</string>
+    <string name="vaccination">தடுப்பூசி</string>
+    <string name="insurance">காப்பீடு</string>
+    <string name="safety_alerts_count">பாதுகாப்பு விழிப்பூட்டல்கள் (%d)</string>
+    <string name="due_deworming_count">குடற்புழு நீக்கத்திற்கான நேரம் (%d)</string>
+    <string name="due_vaccination_count">தடுப்பூசிக்கான நேரம் (%d)</string>
+    <string name="health_summary">ஆரோக்கியச் சுருக்கம்</string>
+    <string name="safety_summary">பாதுகாப்புச் சுருக்கம்</string>
+    <string name="all_protected">அனைத்து ஆடுகளும் பாதுகாக்கப்பட்டுள்ளன! ✅</string>
+    <string name="all_healthy">அனைத்து ஆடுகளும் ஆரோக்கியமாக உள்ளன! ✅</string>
+    <string name="no_record_found">பதிவு எதுவும் இல்லை</string>
+    <string name="policy_expired">பாலிசி காலாவதியானது</string>
+    <string name="due_exceeded">காலக்கெடு முடிந்தது</string>
+    <string name="needs_attention">கவனம் தேவை</string>
+    <string name="due_label">பாக்கி</string>
+    <string name="needs_attention_count">%d கவனத்திற்கு</string>
+    <string name="due_count_label">%d பாக்கி</string>
+
+    <string name="paid">செலுத்தப்பட்டது</string>
+    <string name="pending">நிலுவையில் உள்ளது</string>
+    <string name="partial">பகுதி</string>
+
+    <string name="herd_insured_desc">உங்கள் வயதுவந்த மந்தை %d%% காப்பீடு செய்யப்பட்டுள்ளது.</string>
+    <string name="expired_insurance_desc">• %d ஆடுகளின் காப்பீடு காலாவதியானது.</string>
+    <string name="missing_insurance_desc">• %d ஆடுகளுக்கு காப்பீட்டுப் பதிவு இல்லை.</string>
+    <string name="herd_health_desc">பதிவுகளின்படி உங்கள் மந்தை (பெரிய ஆடுகள்) %d%% ஆரோக்கியமாக உள்ளது.</string>
+    <string name="need_deworming_desc">• %d ஆடுகளுக்கு குடற்புழு நீக்கம் தேவை.</string>
+    <string name="need_vaccination_desc">• %d ஆடுகளுக்கு தடுப்பூசி தேவை.</string>
+
+    <!-- Goat Dialog -->
+    <string name="goat_photo">ஆடு புகைப்படம்</string>
+    <string name="photo_source_desc">உங்கள் ஆட்டிற்கான புகைப்பட ஆதாரத்தைத் தேர்ந்தெடுக்கவும்.</string>
+    <string name="camera">கேமரா</string>
+    <string name="gallery">கேலரி</string>
+    <string name="register_goat">ஆடு பதிவு</string>
+    <string name="edit_goat">ஆடு விவரம் திருத்து</string>
+    <string name="add_photo">புகைப்படத்தைச் சேர்</string>
+    <string name="goat_id_req">ஆடு ஐடி *</string>
+    <string name="name_label">பெயர்</string>
+    <string name="breed_req">இனம் *</string>
+    <string name="dob_req">பிறந்த தேதி *</string>
+    <string name="gender_label">பாலினம்</string>
+    <string name="status_label_field">நிலை</string>
+    <string name="dam_id_label">தாய் ஆடு ஐடி</string>
+    <string name="sire_id_label">தந்தை ஆடு ஐடி</string>
+    <string name="color_markings_label">நிறம் / அடையாளங்கள்</string>
+    <string name="microchip_id_label">மைக்ரோசிப் ஐடி</string>
+    <string name="notes_label">குறிப்புகள்</string>
+    <string name="delete_btn">நீக்கு</string>
+
+    <!-- Record Dialog -->
+    <string name="add_record_title">%s பதிவைச் சேர்</string>
+    <string name="edit_record_title">%s பதிவைத் திருத்து</string>
+    <string name="goat_group_label">ஆடு / குழு *</string>
+    <string name="record_date_req">பதிவு தேதி *</string>
+    <string name="health_event_label">ஆரோக்கிய நிகழ்வு (குடற்புழு நீக்கம்/தடுப்பூசி) *</string>
+    <string name="title_desc_req">தலைப்பு / விவரம் *</string>
+    <string name="veterinarian_label">கால்நடை மருத்துவர்</string>
+    <string name="next_due_date_label">அடுத்த தேதி</string>
+    <string name="cost_label">செலவு</string>
+    <string name="expected_kidding_label">எதிர்பார்க்கப்படும் குட்டி ஈனும் தேதி: %s</string>
+    <string name="actual_kidding_date_label">உண்மையான குட்டி ஈனும் தேதி</string>
+    <string name="kids_born_label">பிறந்த குட்டிகள்</string>
+    <string name="kids_alive_label">உயிருடன் இருக்கும் குட்டிகள்</string>
+    <string name="insurer_label">காப்பீட்டாளர்</string>
+    <string name="policy_number_label">பாலிசி எண்</string>
+    <string name="expiry_date_req">காலாவதி தேதி *</string>
+    <string name="coverage_amount_label">காப்பீட்டுத் தொகை</string>
+    <string name="buyer_label">வாங்குபவர்</string>
+    <string name="quantity_label">அளவு</string>
+    <string name="unit_kg_l_label">அலகு (கிலோ, லிட்டர்)</string>
+    <string name="price_label">விலை</string>
+    <string name="payment_status_label">பணம் செலுத்திய நிலை</string>
+    <string name="new_owner_farm_label">புதிய உரிமையாளர் / பண்ணை</string>
+    <string name="reason_label">காரணம்</string>
+    <string name="additional_details_label">கூடுதல் விவரங்கள்</string>
+    <string name="verify_register_btn">சரிபார்த்து பதிவு செய்</string>
+
+    <!-- Goat Profile -->
+    <string name="info_tab">தகவல்</string>
+    <string name="health_tab_label">ஆரோக்கியம்</string>
+    <string name="breeding_tab_label">இனப்பெருக்கம்</string>
+    <string name="safety_tab_label">பாதுகாப்பு</string>
+    <string name="sales_tab_label">விற்பனை</string>
+    <string name="age_label">வயது</string>
+    <string name="born_label">பிறப்பு</string>
+    <string name="family_tree_label">குடும்ப மரம் / வம்சாவளி</string>
+    <string name="edit_goat_btn">ஆடு விவரம் திருத்து</string>
+    <string name="delete_goat_btn">ஆட்டை நீக்கு</string>
+    <string name="dam_mother_label">தாய்</string>
+    <string name="sire_father_label">தந்தை</string>
+    <string name="this_goat_label">இந்த ஆடு</string>
+    <string name="not_recorded_label">பதிவு செய்யப்படவில்லை</string>
+    <string name="no_records_for_goat">இந்த ஆட்டிற்கு %s பதிவுகள் இல்லை.</string>
+
+    <!-- Farm Details -->
+    <string name="verify_phone_title">தொலைபேசி எண்ணைச் சரிபார்க்கவும்</string>
+    <string name="otp_sent_desc">%s எண்ணிற்கு 6 இலக்க சரிபார்ப்புக் குறியீட்டை அனுப்பியுள்ளோம். பதிவை முடிக்க அதை கீழே உள்ளிடவும்.</string>
+    <string name="otp_code_label">6 இலக்க குறியீடு</string>
+    <string name="resend_code_btn">குறியீடு வரவில்லையா? மீண்டும் அனுப்பு</string>
+    <string name="farm_name_req">பண்ணையின் பெயர் *</string>
+    <string name="farm_owner_name_req">பண்ணை உரிமையாளர் பெயர் *</string>
+    <string name="country_req">நாடு *</string>
+    <string name="state_req">மாநிலம் *</string>
+    <string name="district_req">மாவட்டம் *</string>
+    <string name="state_province_label">மாநிலம் / மாகாணம்</string>
+    <string name="city_label">நகரம்</string>
+    <string name="address_label">முகவரி</string>
+    <string name="code_label_field">குறியீடு</string>
+    <string name="contact_no_req">தொடர்பு எண் *</string>
+    <string name="send_otp_btn">OTP அனுப்பு</string>
+    <string name="edit_registry_btn">பதிவைத் திருத்து</string>
+    <string name="ok">சரி</string>
+
+    <!-- Login -->
+    <string name="secure_herd_mgmt">பாதுகாப்பான மந்தை மேலாண்மை</string>
+    <string name="sign_in_google">கூகுள் மூலம் உள்நுழைக</string>
+    <string name="sync_desc">உங்கள் தரவு தானாகவே உங்கள் கூகிள் கணக்கில் ஒத்திசைக்கப்படும்.</string>
+</resources>

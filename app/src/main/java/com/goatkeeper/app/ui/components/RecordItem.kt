@@ -17,6 +17,9 @@ import androidx.compose.ui.unit.dp
 import com.goatkeeper.app.data.FarmRecord
 import com.goatkeeper.app.util.formatDate
 
+import androidx.compose.ui.res.stringResource
+import com.goatkeeper.app.R
+
 @Composable
 fun RecordItem(
     record: FarmRecord,
@@ -66,8 +69,17 @@ fun RecordItem(
                     )
                 }
                 
+                val typeLabel = when(record.type) {
+                    "Health" -> stringResource(R.string.health)
+                    "Breeding" -> stringResource(R.string.breeding)
+                    "Insurance" -> stringResource(R.string.safety)
+                    "Sale" -> stringResource(R.string.sale)
+                    "Transfer" -> stringResource(R.string.transfer)
+                    else -> record.type
+                }
+
                 Text(
-                    text = "${record.type}: ${record.title}",
+                    text = "$typeLabel: ${record.title}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = color
                 )
@@ -85,7 +97,7 @@ fun RecordItem(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Due: ${formatDate(record.dueDate)}",
+                            text = stringResource(R.string.due_label) + ": ${formatDate(record.dueDate)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.error
                         )

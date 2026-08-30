@@ -1,6 +1,5 @@
 package com.goatkeeper.app.ui.dashboards
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +22,9 @@ import com.goatkeeper.app.ui.components.StatCard
 import com.goatkeeper.app.ui.records.GoatCard
 import com.goatkeeper.app.util.*
 
+import androidx.compose.ui.res.stringResource
+import com.goatkeeper.app.R
+
 @Composable
 fun Dashboard(goats: List<Goat>, records: List<FarmRecord>, onOpen: (String) -> Unit) {
     val activeCount = goats.count { it.status == "Active" }
@@ -32,10 +34,10 @@ fun Dashboard(goats: List<Goat>, records: List<FarmRecord>, onOpen: (String) -> 
     val alerts = records.filter { it.dueDate.isNotBlank() && it.dueDate >= today && it.dueDate <= nextWeek }
 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Text("Your farm at a glance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+        item { Text(stringResource(R.string.farm_glance), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCard("Total Goats", activeCount.toString(), "🐐", modifier = Modifier.weight(1f))
+                StatCard(stringResource(R.string.total_goats), activeCount.toString(), "🐐", modifier = Modifier.weight(1f))
                 
                 Card(
                     modifier = Modifier.weight(1f),
@@ -50,26 +52,26 @@ fun Dashboard(goats: List<Goat>, records: List<FarmRecord>, onOpen: (String) -> 
                         verticalArrangement = Arrangement.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("♂ Male", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Text("♂ " + stringResource(R.string.male), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             Text(maleCount.toString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
                         }
                         Spacer(Modifier.height(8.dp))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("♀ Female", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Text("♀ " + stringResource(R.string.female), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             Text(femaleCount.toString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
                         }
                     }
                 }
 
-                StatCard("Babies", kidsCount.toString(), "🍼", modifier = Modifier.weight(1f))
+                StatCard(stringResource(R.string.babies), kidsCount.toString(), "🍼", modifier = Modifier.weight(1f))
             }
         }
-        item { Text("Upcoming alerts", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
+        item { Text(stringResource(R.string.upcoming_alerts), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
         if (alerts.isEmpty()) {
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFD1FAE5).copy(alpha = 0.5f))) {
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                        Text("No upcoming alerts in the next 7 days. ✅", color = Color(0xFF065F46))
+                        Text(stringResource(R.string.no_upcoming_alerts), color = Color(0xFF065F46))
                     }
                 }
             }
@@ -79,12 +81,12 @@ fun Dashboard(goats: List<Goat>, records: List<FarmRecord>, onOpen: (String) -> 
                     record = record,
                     goatName = record.goatId?.let { gid -> 
                         goats.find { it.id == gid }?.name?.ifBlank { gid } ?: gid
-                    } ?: "Entire Herd",
+                    } ?: stringResource(R.string.entire_herd),
                     onClick = { record.goatId?.let { onOpen(it) } }
                 )
             }
         }
-        item { Text("Recent Goats", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
+        item { Text(stringResource(R.string.recent_goats), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
         val recentGoats = goats.sortedByDescending { it.lastViewed }.take(3)
         items(recentGoats, key = { it.id }) { goat -> GoatCard(goat, onOpen) }
     }
@@ -113,7 +115,7 @@ fun SafetyDashboard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Overall Herd Safety", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.overall_safety), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text("${stats.averageSafety}%", style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Black, color = color)
                 }
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp)) {
@@ -131,7 +133,7 @@ fun SafetyDashboard(
 
         Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SafetyStatCard(
-                title = "Insurance",
+                title = stringResource(R.string.insurance),
                 count = stats.insuredCount,
                 total = stats.totalGoats,
                 percentage = stats.insurancePercentage,
@@ -143,8 +145,8 @@ fun SafetyDashboard(
         }
 
         val listTitle = when (filterType) {
-            "Exceeded Insurance" -> "Safety Alerts (${stats.expiredInsuranceIds.size + stats.missingInsuranceIds.size})"
-            else -> "Safety Summary"
+            "Exceeded Insurance" -> stringResource(R.string.safety_alerts_count, stats.expiredInsuranceIds.size + stats.missingInsuranceIds.size)
+            else -> stringResource(R.string.safety_summary)
         }
 
         Text(listTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
@@ -160,16 +162,16 @@ fun SafetyDashboard(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFD1FAE5).copy(alpha = 0.5f))
             ) {
                 Box(Modifier.padding(24.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("All goats are protected! ✅", color = Color(0xFF065F46))
+                    Text(stringResource(R.string.all_protected), color = Color(0xFF065F46))
                 }
             }
         } else if (filterType == "All") {
              Card(modifier = Modifier.fillMaxWidth()) {
                  Column(Modifier.padding(16.dp)) {
-                     Text("Your adult herd is ${stats.averageSafety}% insured.", style = MaterialTheme.typography.bodyMedium)
+                     Text(stringResource(R.string.herd_insured_desc, stats.averageSafety), style = MaterialTheme.typography.bodyMedium)
                      Spacer(Modifier.height(8.dp))
-                     Text("• ${stats.expiredInsuranceIds.size} goats have expired insurance.", style = MaterialTheme.typography.bodySmall)
-                     Text("• ${stats.missingInsuranceIds.size} goats have no insurance record.", style = MaterialTheme.typography.bodySmall)
+                     Text(stringResource(R.string.expired_insurance_desc, stats.expiredInsuranceIds.size), style = MaterialTheme.typography.bodySmall)
+                     Text(stringResource(R.string.missing_insurance_desc, stats.missingInsuranceIds.size), style = MaterialTheme.typography.bodySmall)
                  }
              }
         } else {
@@ -185,7 +187,7 @@ fun SafetyDashboard(
                             Text(goat?.name?.ifBlank { id } ?: id, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                             Icon(Icons.Default.Security, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text(if (isMissing) "No Record Found" else "Policy Expired", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                            Text(if (isMissing) stringResource(R.string.no_record_found) else stringResource(R.string.policy_expired), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -222,7 +224,7 @@ fun SafetyStatCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(12.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("$exceededCount Needs Attention", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.needs_attention_count, exceededCount), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -252,7 +254,7 @@ fun HealthDashboard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text("Overall Herd Health", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.overall_health), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text("${stats.averageHealth}%", style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Black, color = color)
                 }
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp)) {
@@ -270,7 +272,7 @@ fun HealthDashboard(
 
         Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             HealthStatCard(
-                title = "Deworming",
+                title = stringResource(R.string.deworming),
                 count = stats.dewormedCount,
                 total = stats.totalGoats,
                 percentage = stats.dewormingPercentage,
@@ -280,7 +282,7 @@ fun HealthDashboard(
                 modifier = Modifier.weight(1f)
             )
             HealthStatCard(
-                title = "Vaccination",
+                title = stringResource(R.string.vaccination),
                 count = stats.vaccinatedCount,
                 total = stats.totalGoats,
                 percentage = stats.vaccinationPercentage,
@@ -292,9 +294,9 @@ fun HealthDashboard(
         }
 
         val listTitle = when (filterType) {
-            "Exceeded Deworming" -> "Due for Deworming (${stats.exceededDewormingIds.size + stats.missingDewormingIds.size})"
-            "Exceeded Vaccination" -> "Due for Vaccination (${stats.exceededVaccinationIds.size + stats.missingVaccinationIds.size})"
-            else -> "Health Summary"
+            "Exceeded Deworming" -> stringResource(R.string.due_deworming_count, stats.exceededDewormingIds.size + stats.missingDewormingIds.size)
+            "Exceeded Vaccination" -> stringResource(R.string.due_vaccination_count, stats.exceededVaccinationIds.size + stats.missingVaccinationIds.size)
+            else -> stringResource(R.string.health_summary)
         }
 
         Text(listTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
@@ -311,16 +313,16 @@ fun HealthDashboard(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFD1FAE5).copy(alpha = 0.5f))
             ) {
                 Box(Modifier.padding(24.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("All goats are up to date! ✅", color = Color(0xFF065F46))
+                    Text(stringResource(R.string.all_healthy), color = Color(0xFF065F46))
                 }
             }
         } else if (filterType == "All") {
              Card(modifier = Modifier.fillMaxWidth()) {
                  Column(Modifier.padding(16.dp)) {
-                     Text("Your herd (adults) is ${stats.averageHealth}% healthy based on records.", style = MaterialTheme.typography.bodyMedium)
+                     Text(stringResource(R.string.herd_health_desc, stats.averageHealth), style = MaterialTheme.typography.bodyMedium)
                      Spacer(Modifier.height(8.dp))
-                     Text("• ${stats.exceededDewormingIds.size + stats.missingDewormingIds.size} goats need deworming.", style = MaterialTheme.typography.bodySmall)
-                     Text("• ${stats.exceededVaccinationIds.size + stats.missingVaccinationIds.size} goats need vaccination.", style = MaterialTheme.typography.bodySmall)
+                     Text(stringResource(R.string.need_deworming_desc, stats.exceededDewormingIds.size + stats.missingDewormingIds.size), style = MaterialTheme.typography.bodySmall)
+                     Text(stringResource(R.string.need_vaccination_desc, stats.exceededVaccinationIds.size + stats.missingVaccinationIds.size), style = MaterialTheme.typography.bodySmall)
                  }
              }
         } else {
@@ -340,7 +342,7 @@ fun HealthDashboard(
                             Text(goat?.name?.ifBlank { id } ?: id, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                             Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text(if (isMissing) "No Record Found" else "Due Exceeded", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                            Text(if (isMissing) stringResource(R.string.no_record_found) else stringResource(R.string.due_exceeded), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -377,7 +379,7 @@ fun HealthStatCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(12.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("$exceededCount Due", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.due_count_label, exceededCount), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                 }
             }
         }

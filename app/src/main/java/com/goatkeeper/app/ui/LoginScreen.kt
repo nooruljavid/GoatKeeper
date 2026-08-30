@@ -3,6 +3,8 @@ package com.goatkeeper.app.ui
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,8 +20,12 @@ import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+import androidx.compose.ui.res.stringResource
+import com.goatkeeper.app.R
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(onLoginSuccess: (FirebaseUser) -> Unit) {
+fun LoginScreen(onLoginSuccess: (FirebaseUser) -> Unit, onDismiss: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
@@ -49,39 +55,52 @@ fun LoginScreen(onLoginSuccess: (FirebaseUser) -> Unit) {
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // App Logo or Icon
-        Text("🐐", style = MaterialTheme.typography.displayLarge)
-        Spacer(Modifier.height(16.dp))
-        Text("GoatKeeper", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-        Text("Secure Herd Management", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
-        
-        Spacer(Modifier.height(48.dp))
-
-        if (isLoading) {
-            CircularProgressIndicator()
-        } else {
-            Button(
-                onClick = {
-                    isLoading = true
-                    launcher.launch(googleSignInClient.signInIntent)
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp)
-            ) {
-                Text("Sign in with Google")
-            }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.sign_in)) },
+                navigationIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
+                    }
+                }
+            )
         }
-        
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "Your data will be automatically synced to your Google Account.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
+    ) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // App Logo or Icon
+            Text("🐐", style = MaterialTheme.typography.displayLarge)
+            Spacer(Modifier.height(16.dp))
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.secure_herd_mgmt), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+            
+            Spacer(Modifier.height(48.dp))
+
+            if (isLoading) {
+                CircularProgressIndicator()
+            } else {
+                Button(
+                    onClick = {
+                        isLoading = true
+                        launcher.launch(googleSignInClient.signInIntent)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                ) {
+                    Text(stringResource(R.string.sign_in_google))
+                }
+            }
+            
+            Spacer(Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.sync_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
     }
 }

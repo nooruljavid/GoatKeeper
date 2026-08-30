@@ -28,6 +28,9 @@ import com.goatkeeper.app.ui.components.DatePickerField
 import com.goatkeeper.app.util.today
 import java.io.File
 
+import androidx.compose.ui.res.stringResource
+import com.goatkeeper.app.R
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GoatDialog(
@@ -81,13 +84,13 @@ fun GoatDialog(
     if (showPhotoOptions) {
         AlertDialog(
             onDismissRequest = { showPhotoOptions = false },
-            title = { Text("Goat Photo") },
-            text = { Text("Choose a photo source for your goat.") },
+            title = { Text(stringResource(R.string.goat_photo)) },
+            text = { Text(stringResource(R.string.photo_source_desc)) },
             confirmButton = {
                 TextButton(onClick = { showPhotoOptions = false; takePhoto() }) {
                     Icon(Icons.Default.CameraAlt, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Camera")
+                    Text(stringResource(R.string.camera))
                 }
             },
             dismissButton = {
@@ -97,7 +100,7 @@ fun GoatDialog(
                 }) {
                     Icon(Icons.Default.PhotoLibrary, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Gallery")
+                    Text(stringResource(R.string.gallery))
                 }
             }
         )
@@ -105,7 +108,7 @@ fun GoatDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (existing == null) "Register Goat" else "Edit Goat", fontWeight = FontWeight.Bold) },
+        title = { Text(if (existing == null) stringResource(R.string.register_goat) else stringResource(R.string.edit_goat), fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
@@ -120,7 +123,7 @@ fun GoatDialog(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.AddAPhoto, null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.height(4.dp))
-                            Text("Add Photo", style = MaterialTheme.typography.labelMedium)
+                            Text(stringResource(R.string.add_photo), style = MaterialTheme.typography.labelMedium)
                         }
                     } else {
                         AsyncImage(model = photoUri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -134,11 +137,11 @@ fun GoatDialog(
                     }
                 }
 
-                Field("Goat ID *", id, change = { id = it })
-                Field("Name", name, change = { name = it })
+                Field(stringResource(R.string.goat_id_req), id, change = { id = it })
+                Field(stringResource(R.string.name_label), name, change = { name = it })
 
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    Field("Breed *", breed, change = { breed = it; showBreedMenu = true })
+                    Field(stringResource(R.string.breed_req), breed, change = { breed = it; showBreedMenu = true })
                     if (showBreedMenu && filteredBreeds.isNotEmpty()) {
                         DropdownMenu(
                             expanded = showBreedMenu,
@@ -153,31 +156,38 @@ fun GoatDialog(
                     }
                 }
 
-                DatePickerField("Date of Birth *", dob, { dob = it })
+                DatePickerField(stringResource(R.string.dob_req), dob, { dob = it })
 
                 Column {
-                    Text("Gender", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.gender_label), style = MaterialTheme.typography.labelMedium)
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = gender == "Female", onClick = { gender = "Female" }, label = { Text("♀ Female") }, modifier = Modifier.weight(1f))
-                        FilterChip(selected = gender == "Male", onClick = { gender = "Male" }, label = { Text("♂ Male") }, modifier = Modifier.weight(1f))
+                        FilterChip(selected = gender == "Female", onClick = { gender = "Female" }, label = { Text("♀ " + stringResource(R.string.female)) }, modifier = Modifier.weight(1f))
+                        FilterChip(selected = gender == "Male", onClick = { gender = "Male" }, label = { Text("♂ " + stringResource(R.string.male)) }, modifier = Modifier.weight(1f))
                     }
                 }
 
                 Column {
-                    Text("Status", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.status_label_field), style = MaterialTheme.typography.labelMedium)
                     FlowRow(
                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         listOf("Active", "Sold", "Deceased", "Transferred").forEach { value ->
-                            FilterChip(selected = status == value, onClick = { status = value }, label = { Text(value) })
+                            val label = when(value) {
+                                "Active" -> stringResource(R.string.active)
+                                "Sold" -> stringResource(R.string.sold)
+                                "Deceased" -> stringResource(R.string.deceased)
+                                "Transferred" -> stringResource(R.string.transferred)
+                                else -> value
+                            }
+                            FilterChip(selected = status == value, onClick = { status = value }, label = { Text(label) })
                         }
                     }
                 }
 
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    Field("Dam ID", dam, change = { dam = it; showDamMenu = true })
+                    Field(stringResource(R.string.dam_id_label), dam, change = { dam = it; showDamMenu = true })
                     if (showDamMenu && filteredDams.isNotEmpty()) {
                         DropdownMenu(
                             expanded = showDamMenu,
@@ -196,7 +206,7 @@ fun GoatDialog(
                 }
 
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    Field("Sire ID", sire, change = { sire = it; showSireMenu = true })
+                    Field(stringResource(R.string.sire_id_label), sire, change = { sire = it; showSireMenu = true })
                     if (showSireMenu && filteredSires.isNotEmpty()) {
                         DropdownMenu(
                             expanded = showSireMenu,
@@ -214,9 +224,9 @@ fun GoatDialog(
                     }
                 }
 
-                Field("Color / Markings", color, change = { color = it })
-                Field("Microchip ID", microchip, change = { microchip = it })
-                OutlinedTextField(notes, { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth().height(100.dp))
+                Field(stringResource(R.string.color_markings_label), color, change = { color = it })
+                Field(stringResource(R.string.microchip_id_label), microchip, change = { microchip = it })
+                OutlinedTextField(notes, { notes = it }, label = { Text(stringResource(R.string.notes_label)) }, modifier = Modifier.fillMaxWidth().height(100.dp))
             }
         },
         confirmButton = {
@@ -228,11 +238,11 @@ fun GoatDialog(
                     ) {
                         Icon(Icons.Default.Delete, null)
                         Spacer(Modifier.width(4.dp))
-                        Text("Delete")
+                        Text(stringResource(R.string.delete_btn))
                     }
                     Spacer(Modifier.weight(1f))
                 }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                 TextButton(enabled = id.isNotBlank() && breed.isNotBlank(), onClick = {
                     onSave(
                         Goat(
@@ -252,7 +262,7 @@ fun GoatDialog(
                             notes = notes.trim()
                         )
                     )
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.save)) }
             }
         },
         dismissButton = {}

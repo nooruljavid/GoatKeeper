@@ -23,6 +23,7 @@ android {
 
 dependencies {
     implementation(libs.androidx.core)
+    implementation("androidx.appcompat:appcompat:1.6.1")
     implementation(libs.activity.compose)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

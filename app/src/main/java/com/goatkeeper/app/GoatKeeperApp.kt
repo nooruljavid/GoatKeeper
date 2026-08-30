@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,10 +25,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +51,7 @@ import com.goatkeeper.app.ui.records.Herd
 import com.goatkeeper.app.ui.records.Records
 import com.goatkeeper.app.ui.reports.Reports
 import com.goatkeeper.app.util.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -56,67 +61,121 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String, File?) -> Unit) {
     val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     var user by remember { mutableStateOf(auth.currentUser) }
     var isSigningOut by remember { mutableStateOf(false) }
+    var showLogin by remember { mutableStateOf(false) }
+    var forceRegistryAfterLogin by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val syncManager = remember(dao) { SyncManager(context.applicationContext, dao) }
 
-    if (user == null) {
-        LoginScreen { newUser ->
-            user = newUser
-            // On a fresh login, pull the cloud copy. Any local data that belongs to this
-            // account is synchronized first when the account is already active.
-            scope.launch { syncManager.syncNow() }
+    val farmDetails by dao.farmDetails().collectAsState(initial = null)
+    val appSettings by dao.appSettings().collectAsState(initial = null)
+
+    LaunchedEffect(appSettings) {
+        appSettings?.let {
+            val appLocale = androidx.core.os.LocaleListCompat.forLanguageTags(it.language)
+            val currentLocales = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()
+            
+            // Only apply if the locale is actually different to prevent recreation loops
+            // Comparison is done using language tags to handle partial matches (e.g., 'ta' vs 'ta-IN')
+            val currentLang = currentLocales.toLanguageTags().split(",").firstOrNull()?.split("-")?.firstOrNull() ?: "en"
+            if (currentLang != it.language) {
+                androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(appLocale)
+            }
         }
-    } else {
-        Box(Modifier.fillMaxSize()) {
-            MainAppContent(dao, share, syncManager, user!!) {
-                scope.launch {
-                    isSigningOut = true
-                    // Never clear Room data until the current local state has been pushed.
-                    // This is critical for offline edits followed by sign-out.
-                    val synced = syncManager.syncNow()
-                    if (!synced) {
-                        isSigningOut = false
-                        android.widget.Toast.makeText(
-                            context,
-                            "Could not sync your changes. Connect to the internet before signing out.",
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
-                        return@launch
-                    }
+    }
 
-                    auth.signOut()
-
-                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken("39674470741-uj8j4igkp4sgsr3cbh346pptu5td2214.apps.googleusercontent.com")
-                        .requestEmail()
-                        .build()
-                    GoogleSignIn.getClient(context, gso).signOut()
-
-                    dao.clearGoats()
-                    dao.clearRecords()
-                    user = null
+    fun performSignOut(clearLocalData: Boolean = true) {
+        scope.launch {
+            if (clearLocalData) {
+                isSigningOut = true
+                // Never clear Room data until the current local state has been pushed.
+                val synced = syncManager.syncNow()
+                if (!synced && user != null) {
                     isSigningOut = false
+                    android.widget.Toast.makeText(
+                        context,
+                        "Could not sync your changes. Connect to the internet before signing out.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    return@launch
                 }
             }
 
-            if (isSigningOut) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = Color.Black.copy(alpha = 0.5f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            auth.signOut()
+
+            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken("39674470741-uj8j4igkp4sgsr3cbh346pptu5td2214.apps.googleusercontent.com")
+                .requestEmail()
+                .build()
+            GoogleSignIn.getClient(context, gso).signOut()
+
+            if (clearLocalData) {
+                dao.clearGoats()
+                dao.clearRecords()
+                dao.clearFarmDetails()
+            }
+            
+            user = null
+            isSigningOut = false
+            forceRegistryAfterLogin = false
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        if (showLogin) {
+            LoginScreen(
+                onLoginSuccess = { newUser ->
+                    user = newUser
+                    showLogin = false
+                    // Start sync to check for existing cloud registry
+                    scope.launch {
+                        syncManager.syncNow()
+                        // After sync, if still no local details, trigger the registry dialog
+                        if (dao.farmDetails().first() == null) {
+                            forceRegistryAfterLogin = true
+                        }
+                    }
+                },
+                onDismiss = { showLogin = false }
+            )
+        } else {
+            MainAppContent(
+                dao = dao,
+                share = share,
+                syncManager = syncManager,
+                user = user,
+                appSettings = appSettings,
+                editFarmDetails = forceRegistryAfterLogin,
+                onCloseFarmDetails = { confirmed ->
+                    if (forceRegistryAfterLogin && !confirmed) {
+                        // User cancelled the mandatory registry, so log them out 
+                        // but KEEP their local data.
+                        performSignOut(clearLocalData = false)
+                    }
+                    forceRegistryAfterLogin = false 
+                },
+                onSignIn = { showLogin = true },
+                onSignOut = { performSignOut(clearLocalData = true) }
+            )
+        }
+
+        if (isSigningOut) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = Color.Black.copy(alpha = 0.5f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Column(
-                                modifier = Modifier.padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                CircularProgressIndicator()
-                                Spacer(Modifier.height(16.dp))
-                                Text("Signing out and syncing...", style = MaterialTheme.typography.bodyMedium)
-                            }
+                            CircularProgressIndicator()
+                            Spacer(Modifier.height(16.dp))
+                            Text("Signing out and syncing...", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
@@ -125,13 +184,17 @@ fun GoatKeeperApp(dao: FarmDao, share: (String, String, File?) -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainAppContent(
     dao: FarmDao,
     share: (String, String, File?) -> Unit,
     syncManager: SyncManager,
-    user: com.google.firebase.auth.FirebaseUser,
+    user: com.google.firebase.auth.FirebaseUser?,
+    appSettings: AppSettings?,
+    editFarmDetails: Boolean = false,
+    onCloseFarmDetails: (Boolean) -> Unit = {},
+    onSignIn: () -> Unit,
     onSignOut: () -> Unit
 ) {
     val goats by dao.goats().collectAsState(initial = emptyList())
@@ -139,6 +202,12 @@ private fun MainAppContent(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val calendarManager = remember { CalendarManager(context) }
+
+    // Smooth entry transition for language switches
+    val alphaAnim = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        alphaAnim.animateTo(1f, animationSpec = tween(600))
+    }
 
     val calendarPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -151,8 +220,14 @@ private fun MainAppContent(
     var addRecordType by remember { mutableStateOf<String?>(null) }
     var recordGoatId by remember { mutableStateOf<String?>(null) }
     var editRecord by remember { mutableStateOf<FarmRecord?>(null) }
+    var showFarmDetails by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     var showAccountMenu by remember { mutableStateOf(false) }
     var selectedGoatTab by rememberSaveable { mutableStateOf("Info") }
+
+    val farmDetails by dao.farmDetails().collectAsState(initial = null)
+
+    val activeEditFarmDetails = editFarmDetails || showFarmDetails
 
     var tabHistory by rememberSaveable { mutableStateOf(listOf(0)) }
     var herdQuery by rememberSaveable { mutableStateOf("") }
@@ -235,10 +310,29 @@ private fun MainAppContent(
         calendarPermissionLauncher.launch(android.Manifest.permission.WRITE_CALENDAR)
     }
 
-    Scaffold(
-        topBar = {
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .alpha(alphaAnim.value),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Scaffold(
+            topBar = {
             TopAppBar(
-                title = { Text(if (selectedGoat == null) listOf("Dashboard", "Herd", "Records", "Reports")[tab] else "Goat Profile") },
+                title = { 
+                    Text(
+                        if (selectedGoat == null) {
+                            listOf(
+                                stringResource(R.string.dashboard),
+                                stringResource(R.string.herd),
+                                stringResource(R.string.records),
+                                stringResource(R.string.reports)
+                            )[tab]
+                        } else {
+                            stringResource(R.string.goat_profile)
+                        }
+                    ) 
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -255,7 +349,7 @@ private fun MainAppContent(
                     if (selectedGoat == null) {
                         Box {
                             IconButton(onClick = { showAccountMenu = true }) {
-                                if (user.photoUrl != null) {
+                                if (user?.photoUrl != null) {
                                     AsyncImage(
                                         model = user.photoUrl,
                                         contentDescription = "Profile",
@@ -270,30 +364,79 @@ private fun MainAppContent(
                                 expanded = showAccountMenu,
                                 onDismissRequest = { showAccountMenu = false }
                             ) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text("Signed in as:", style = MaterialTheme.typography.labelSmall)
-                                            Text(user.email ?: "Unknown User", fontWeight = FontWeight.Bold)
+                                if (user != null) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text("Signed in as:", style = MaterialTheme.typography.labelSmall)
+                                                Text(user.email ?: "Unknown User", fontWeight = FontWeight.Bold)
+                                            }
+                                        },
+                                        onClick = { },
+                                        enabled = false
+                                    )
+                                } else {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.Login, null, modifier = Modifier.size(20.dp))
+                                                Spacer(Modifier.width(12.dp))
+                                                Text(stringResource(R.string.sign_in))
+                                            }
+                                        },
+                                        onClick = {
+                                            showAccountMenu = false
+                                            onSignIn()
                                         }
-                                    },
-                                    onClick = { },
-                                    enabled = false
-                                )
+                                    )
+                                }
+                                
                                 HorizontalDivider()
+
                                 DropdownMenuItem(
                                     text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.AutoMirrored.Filled.Logout, null, modifier = Modifier.size(20.dp))
+                                            Icon(Icons.Default.Storefront, null, modifier = Modifier.size(20.dp))
                                             Spacer(Modifier.width(12.dp))
-                                            Text("Sign Out")
+                                            Text(stringResource(R.string.farm_registry))
                                         }
                                     },
                                     onClick = {
                                         showAccountMenu = false
-                                        onSignOut()
+                                        showFarmDetails = true
                                     }
                                 )
+
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Settings, null, modifier = Modifier.size(20.dp))
+                                            Spacer(Modifier.width(12.dp))
+                                            Text(stringResource(R.string.settings))
+                                        }
+                                    },
+                                    onClick = {
+                                        showAccountMenu = false
+                                        showSettings = true
+                                    }
+                                )
+
+                                if (user != null) {
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.AutoMirrored.Filled.Logout, null, modifier = Modifier.size(20.dp))
+                                                Spacer(Modifier.width(12.dp))
+                                                Text(stringResource(R.string.sign_out))
+                                            }
+                                        },
+                                        onClick = {
+                                            showAccountMenu = false
+                                            onSignOut()
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -304,10 +447,10 @@ private fun MainAppContent(
             if (selectedGoat == null) {
                 NavigationBar {
                     listOf(
-                        "Dashboard" to Icons.Default.Home,
-                        "Herd" to Icons.Default.Pets,
-                        "Records" to Icons.AutoMirrored.Filled.List,
-                        "Reports" to Icons.Default.Assessment
+                        stringResource(R.string.dashboard) to Icons.Default.Home,
+                        stringResource(R.string.herd) to Icons.Default.Pets,
+                        stringResource(R.string.records) to Icons.AutoMirrored.Filled.List,
+                        stringResource(R.string.reports) to Icons.Default.Assessment
                     ).forEachIndexed { i, item ->
                         NavigationBarItem(
                             selected = tab == i,
@@ -375,6 +518,7 @@ private fun MainAppContent(
             }
         }
     }
+}
 
     if (addGoat) {
         val existingBreeds = goats.map { it.breed }.filter { it.isNotBlank() }.distinct().sorted()
@@ -444,4 +588,36 @@ private fun MainAppContent(
             onDelete = { deleteRecord(it) }
         )
     }
+
+    if (activeEditFarmDetails) {
+        com.goatkeeper.app.ui.dialogs.FarmDetailsDialog(
+            existing = farmDetails,
+            onDismiss = { 
+                showFarmDetails = false
+                onCloseFarmDetails(false)
+            },
+            onSave = {
+                scope.launch {
+                    dao.saveFarmDetails(it)
+                    syncManager.uploadToCloud()
+                }
+                showFarmDetails = false
+                onCloseFarmDetails(true)
+            }
+        )
+    }
+
+    if (showSettings) {
+        com.goatkeeper.app.ui.dialogs.SettingsDialog(
+            existing = appSettings,
+            onDismiss = { showSettings = false },
+            onSave = {
+                scope.launch {
+                    dao.saveAppSettings(it)
+                }
+                showSettings = false
+            }
+        )
+    }
 }
+

@@ -13,6 +13,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.goatkeeper.app.util.formatDate
 
+import androidx.compose.ui.res.stringResource
+import com.goatkeeper.app.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePickerField(
@@ -58,12 +61,12 @@ fun DatePickerField(
                     }
                     showDialog = false
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         ) {
