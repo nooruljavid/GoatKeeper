@@ -119,7 +119,8 @@
     <string name="buyer_label">Buyer</string>
     <string name="quantity_label">Quantity</string>
     <string name="unit_kg_l_label">Unit (kg, L)</string>
-    <string name="price_label">Price</string>
+    <string name="price_label">Total Value</string>
+    <string name="price_per_unit">Price per Unit</string>
     <string name="payment_status_label">Payment Status</string>
     <string name="new_owner_farm_label">New Owner / Farm</string>
     <string name="reason_label">Reason</string>
@@ -166,4 +167,20 @@
     <string name="secure_herd_mgmt">Secure Herd Management</string>
     <string name="sign_in_google">Sign in with Google</string>
     <string name="sync_desc">Your data will be automatically synced to your Google Account.</string>
+
+    <!-- Sales Refactor -->
+    <string name="goat_selling">Goat Selling</string>
+    <string name="manure_selling">Manure Selling</string>
+    <string name="milk_selling">Milk Selling</string>
+    <string name="total_sold">Total Sold</string>
+    <string name="qty_basis">Qty Basis</string>
+    <string name="kg_basis">Kg Basis</string>
+    <string name="liter_basis">Liters Basis</string>
+    <string name="sales_dashboard">Sales Dashboard</string>
+    <string name="monthly">Monthly</string>
+    <string name="yearly">Yearly</string>
+    <string name="total">Total</string>
+    <string name="units_sold">%s Units</string>
+    <string name="kg_sold">%s Kg</string>
+    <string name="liters_sold">%s L</string>
 </resources>

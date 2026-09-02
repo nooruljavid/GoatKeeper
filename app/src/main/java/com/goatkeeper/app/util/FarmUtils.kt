@@ -45,6 +45,22 @@ fun isKid(dob: String): Boolean = try {
     false
 }
 
+fun isInCurrentMonth(date: String): Boolean = try {
+    val d = LocalDate.parse(date)
+    val now = LocalDate.now()
+    d.month == now.month && d.year == now.year
+} catch (_: Exception) {
+    false
+}
+
+fun isInCurrentYear(date: String): Boolean = try {
+    val d = LocalDate.parse(date)
+    val now = LocalDate.now()
+    d.year == now.year
+} catch (_: Exception) {
+    false
+}
+
 fun getStatusColor(percentage: Int): androidx.compose.ui.graphics.Color {
     return when {
         percentage >= 90 -> androidx.compose.ui.graphics.Color(0xFF10B981) // Green

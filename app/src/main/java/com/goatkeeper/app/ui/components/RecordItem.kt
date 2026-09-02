@@ -73,7 +73,7 @@ fun RecordItem(
                     "Health" -> stringResource(R.string.health)
                     "Breeding" -> stringResource(R.string.breeding)
                     "Insurance" -> stringResource(R.string.safety)
-                    "Sale" -> stringResource(R.string.sale)
+                    "Sale", "Goat Sale", "Manure Sale", "Milk Sale" -> stringResource(R.string.sale)
                     "Transfer" -> stringResource(R.string.transfer)
                     else -> record.type
                 }
@@ -119,7 +119,7 @@ private fun getRecordStyle(type: String): Pair<ImageVector, Color> {
         "Health" -> Icons.Default.MedicalServices to Color(0xFF6366F1)
         "Breeding" -> Icons.Default.ChildCare to Color(0xFFF59E0B)
         "Insurance" -> Icons.Default.Security to Color(0xFF6366F1)
-        "Sale" -> Icons.Default.AttachMoney to Color(0xFF10B981)
+        "Sale", "Goat Sale", "Manure Sale", "Milk Sale" -> Icons.Default.AttachMoney to Color(0xFF10B981)
         "Transfer" -> Icons.Default.LocalShipping to Color(0xFF6B7280)
         else -> Icons.Default.Assignment to Color(0xFF10B981)
     }

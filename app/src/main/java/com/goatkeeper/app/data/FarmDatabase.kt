@@ -123,6 +123,12 @@ interface FarmDao {
     @Delete
     suspend fun deleteRecord(record: FarmRecord)
 
+    @Query("DELETE FROM farm_records WHERE goatId = :goatId AND type = :type")
+    suspend fun deleteRecordsByTypeForGoat(goatId: String, type: String)
+
+    @Query("SELECT * FROM farm_records WHERE goatId = :goatId AND type = :type")
+    suspend fun findRecordsByTypeForGoat(goatId: String, type: String): List<FarmRecord>
+
     @Query("DELETE FROM goats")
     suspend fun clearGoats()
 

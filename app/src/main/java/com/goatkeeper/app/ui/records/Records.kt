@@ -9,8 +9,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Agriculture
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,8 +31,7 @@ import com.goatkeeper.app.ui.components.Empty
 import com.goatkeeper.app.ui.components.RecordItem
 import com.goatkeeper.app.ui.dashboards.HealthDashboard
 import com.goatkeeper.app.ui.dashboards.SafetyDashboard
-import com.goatkeeper.app.util.age
-
+import com.goatkeeper.app.util.*
 import androidx.compose.ui.res.stringResource
 import com.goatkeeper.app.R
 
@@ -154,6 +156,11 @@ fun Records(
     onHealthFilterChange: (String) -> Unit,
     safetyFilter: String,
     onSafetyFilterChange: (String) -> Unit,
+    salesFilter: String,
+    onSalesFilterChange: (String) -> Unit,
+    salesTimeFilter: String = "Monthly",
+    onSalesTimeFilterChange: (String) -> Unit = {},
+    currencySymbol: String,
     onAdd: (String) -> Unit,
     onEdit: (FarmRecord) -> Unit,
     onOpen: (String, String) -> Unit
@@ -187,6 +194,17 @@ fun Records(
                 GlobalRecordsList("Safety", records, goats, query, onQueryChange, onAdd, onEdit) { onSafetyFilterChange("All") }
             } else {
                 SafetyDashboard(goats, records, safetyFilter, onSafetyFilterChange, { onSafetyFilterChange("Global Records") }, onOpen)
+            }
+        } else if (type == "Sale") {
+            if (salesFilter == "Global Records Goat" || salesFilter == "Global Records Manure" || salesFilter == "Global Records Milk") {
+                val subType = when(salesFilter) {
+                    "Global Records Goat" -> "Goat Sale"
+                    "Global Records Manure" -> "Manure Sale"
+                    else -> "Milk Sale"
+                }
+                GlobalRecordsList(subType, records, goats, query, onQueryChange, onAdd, onEdit) { onSalesFilterChange("All") }
+            } else {
+                SalesDashboard(records, salesFilter, onSalesFilterChange, salesTimeFilter, onSalesTimeFilterChange, currencySymbol, onAdd, onEdit)
             }
         } else {
             OutlinedTextField(
@@ -241,6 +259,125 @@ fun Records(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SalesDashboard(
+    records: List<FarmRecord>,
+    filterType: String,
+    onFilterChange: (String) -> Unit,
+    timeFilter: String = "Monthly",
+    onTimeFilterChange: (String) -> Unit = {},
+    currencySymbol: String,
+    onAdd: (String) -> Unit,
+    onEdit: (FarmRecord) -> Unit
+) {
+    val filteredByTime = records.filter { 
+        when(timeFilter) {
+            "Monthly" -> isInCurrentMonth(it.date)
+            "Yearly" -> isInCurrentYear(it.date)
+            else -> true
+        }
+    }
+
+    val goatSales = filteredByTime.filter { it.type == "Goat Sale" }
+    val manureSales = filteredByTime.filter { it.type == "Manure Sale" }
+    val milkSales = filteredByTime.filter { it.type == "Milk Sale" }
+
+    val totalGoats = goatSales.sumOf { it.quantity ?: 0.0 }.toInt()
+    val totalManure = manureSales.sumOf { it.quantity ?: 0.0 }
+    val totalMilk = milkSales.sumOf { it.quantity ?: 0.0 }
+
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(stringResource(R.string.sales_dashboard), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                listOf("Monthly", "Yearly", "Total").forEach { tf ->
+                    val label = when(tf) {
+                        "Monthly" -> stringResource(R.string.monthly)
+                        "Yearly" -> stringResource(R.string.yearly)
+                        else -> stringResource(R.string.total)
+                    }
+                    FilterChip(
+                        selected = timeFilter == tf,
+                        onClick = { onTimeFilterChange(tf) },
+                        label = { Text(label, fontSize = 10.sp) }
+                    )
+                }
+            }
+        }
+        
+        Spacer(Modifier.height(12.dp))
+
+        Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SaleStatCard(
+                title = stringResource(R.string.goat_selling),
+                value = stringResource(R.string.units_sold, totalGoats.toString()),
+                basis = stringResource(R.string.qty_basis),
+                icon = { Text("🐐", fontSize = 18.sp) },
+                color = Color(0xFF10B981),
+                onClick = { onFilterChange("Global Records Goat") },
+                modifier = Modifier.weight(1f)
+            )
+        }
+        
+        Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SaleStatCard(
+                title = stringResource(R.string.manure_selling),
+                value = stringResource(R.string.kg_sold, totalManure.toString()),
+                basis = stringResource(R.string.kg_basis),
+                icon = { Icon(Icons.Default.Agriculture, null, tint = Color(0xFFF59E0B), modifier = Modifier.size(18.dp)) },
+                color = Color(0xFFF59E0B),
+                onClick = { onFilterChange("Global Records Manure") },
+                modifier = Modifier.weight(1f)
+            )
+            SaleStatCard(
+                title = stringResource(R.string.milk_selling),
+                value = stringResource(R.string.liters_sold, totalMilk.toString()),
+                basis = stringResource(R.string.liter_basis),
+                icon = { Icon(Icons.Default.WaterDrop, null, tint = Color(0xFF6366F1), modifier = Modifier.size(18.dp)) },
+                color = Color(0xFF6366F1),
+                onClick = { onFilterChange("Global Records Milk") },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text(stringResource(R.string.total_sold), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                val totalValue = (goatSales + manureSales + milkSales).sumOf { it.amount ?: 0.0 }
+                Text("$currencySymbol${String.format(java.util.Locale.US, "%.2f", totalValue)}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+}
+
+@Composable
+fun SaleStatCard(
+    title: String,
+    value: String,
+    basis: String,
+    icon: @Composable () -> Unit,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                icon()
+                Spacer(Modifier.width(8.dp))
+                Text(title, style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+            Text(basis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
         }
     }
 }

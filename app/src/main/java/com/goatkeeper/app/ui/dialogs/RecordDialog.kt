@@ -31,6 +31,7 @@ fun RecordDialog(
     allRecords: List<FarmRecord>,
     initialGoatId: String?,
     existing: FarmRecord?,
+    currencySymbol: String = "₹",
     onDismiss: () -> Unit,
     onSave: (FarmRecord) -> Unit,
     onDelete: ((FarmRecord) -> Unit)? = null
@@ -49,6 +50,13 @@ fun RecordDialog(
     var actualDate by remember(existing?.recordId) { mutableStateOf(existing?.actualDate ?: "") }
     var kidsCount by remember(existing?.recordId) { mutableStateOf(existing?.kidsCount?.toString() ?: "") }
     var kidsAlive by remember(existing?.recordId) { mutableStateOf(existing?.kidsAlive?.toString() ?: "") }
+    var unitPrice by remember(existing?.recordId) { 
+        mutableStateOf(
+            if (existing?.amount != null && (existing.quantity ?: 0.0) > 0.0) 
+                String.format(java.util.Locale.US, "%.2f", existing.amount!! / existing.quantity!!) 
+            else ""
+        ) 
+    }
     var showGoatMenu by remember { mutableStateOf(false) }
     var showTitleMenu by remember { mutableStateOf(false) }
 
@@ -88,14 +96,33 @@ fun RecordDialog(
         "Health" -> stringResource(R.string.health)
         "Breeding" -> stringResource(R.string.breeding)
         "Safety", "Insurance" -> stringResource(R.string.safety)
-        "Sale" -> stringResource(R.string.sale)
+        "Sale", "Goat Sale", "Manure Sale", "Milk Sale" -> stringResource(R.string.sale)
         "Transfer" -> stringResource(R.string.transfer)
         else -> type
     }
 
+    LaunchedEffect(type) {
+        if (unit.isBlank()) {
+            unit = when (type) {
+                "Manure Sale" -> "kg"
+                "Milk Sale" -> "L"
+                "Goat Sale" -> "Qty"
+                else -> ""
+            }
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (existing == null) stringResource(R.string.add_record_title, typeLabel) else stringResource(R.string.edit_record_title, typeLabel), fontWeight = FontWeight.Bold) },
+        title = { 
+            val displayType = when(type) {
+                "Goat Sale" -> stringResource(R.string.goat_selling)
+                "Manure Sale" -> stringResource(R.string.manure_selling)
+                "Milk Sale" -> stringResource(R.string.milk_selling)
+                else -> typeLabel
+            }
+            Text(if (existing == null) stringResource(R.string.add_record_title, displayType) else stringResource(R.string.edit_record_title, displayType), fontWeight = FontWeight.Bold) 
+        },
         text = {
             Column(
                 modifier = Modifier
@@ -194,7 +221,7 @@ fun RecordDialog(
                     "Health" -> {
                         SuggestionField(stringResource(R.string.veterinarian_label), party, suggestions) { party = it }
                         DatePickerField(stringResource(R.string.next_due_date_label), due, { due = it })
-                        Field(stringResource(R.string.cost_label), amount) { amount = it }
+                        Field(stringResource(R.string.cost_label) + " ($currencySymbol)", amount) { amount = it }
                     }
                     "Breeding" -> {
                         Field(stringResource(R.string.sire_id_label), sireId) { sireId = it }
@@ -209,15 +236,31 @@ fun RecordDialog(
                         SuggestionField(stringResource(R.string.insurer_label), party, suggestions) { party = it }
                         Field(stringResource(R.string.policy_number_label), detail) { detail = it }
                         DatePickerField(stringResource(R.string.expiry_date_req), due, { due = it })
-                        Field(stringResource(R.string.coverage_amount_label), amount) { amount = it }
+                        Field(stringResource(R.string.coverage_amount_label) + " ($currencySymbol)", amount) { amount = it }
                     }
-                    "Sale" -> {
+                    "Sale", "Goat Sale", "Manure Sale", "Milk Sale" -> {
                         SuggestionField(stringResource(R.string.buyer_label), party, suggestions) { party = it }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Field(stringResource(R.string.quantity_label), quantity, Modifier.weight(1f)) { quantity = it }
+                            Field(stringResource(R.string.quantity_label), quantity, Modifier.weight(1f)) { 
+                                quantity = it 
+                                // Auto-calculate total
+                                val q = it.toDoubleOrNull() ?: 0.0
+                                val p = unitPrice.toDoubleOrNull() ?: 0.0
+                                if (q > 0 && p > 0) amount = String.format(java.util.Locale.US, "%.2f", q * p)
+                            }
                             Field(stringResource(R.string.unit_kg_l_label), unit, Modifier.weight(1f)) { unit = it }
                         }
-                        Field(stringResource(R.string.price_label), amount) { amount = it }
+                        
+                        Field(stringResource(R.string.price_per_unit) + " ($currencySymbol)", unitPrice) { 
+                            unitPrice = it 
+                            // Auto-calculate total
+                            val q = quantity.toDoubleOrNull() ?: 0.0
+                            val p = it.toDoubleOrNull() ?: 0.0
+                            if (q > 0 && p > 0) amount = String.format(java.util.Locale.US, "%.2f", q * p)
+                        }
+
+                        Field(stringResource(R.string.price_label) + " ($currencySymbol)", amount) { amount = it }
+                        
                         Text(stringResource(R.string.payment_status_label), style = MaterialTheme.typography.labelMedium)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("Paid", "Pending", "Partial").forEach { statusValue ->

@@ -227,6 +227,12 @@ private fun MainAppContent(
 
     val farmDetails by dao.farmDetails().collectAsState(initial = null)
 
+    val currencySymbol = remember(farmDetails) {
+        val selected = countries.find { it.name.trim().equals(farmDetails?.country?.trim(), ignoreCase = true) }
+        android.util.Log.d("GoatKeeperApp", "Country: ${farmDetails?.country}, Selected: ${selected?.name}, Symbol: ${selected?.currencySymbol}")
+        selected?.currencySymbol ?: "₹"
+    }
+
     val activeEditFarmDetails = editFarmDetails || showFarmDetails
 
     var tabHistory by rememberSaveable { mutableStateOf(listOf(0)) }
@@ -237,6 +243,8 @@ private fun MainAppContent(
     var recordsQuery by rememberSaveable { mutableStateOf("") }
     var healthFilterType by rememberSaveable { mutableStateOf("All") }
     var safetyFilterType by rememberSaveable { mutableStateOf("All") }
+    var salesFilterType by rememberSaveable { mutableStateOf("All") }
+    var salesTimeFilter by rememberSaveable { mutableStateOf("Monthly") }
 
     fun openGoat(id: String, initialTab: String = "Info") {
         selectedGoat = id
@@ -267,7 +275,7 @@ private fun MainAppContent(
             if (record.recordId == 0L) dao.saveRecord(record) else dao.updateRecord(record)
             record.goatId?.let { gid ->
                 when (record.type) {
-                    "Sale" -> dao.updateGoatStatus(gid, "Sold")
+                    "Sale", "Goat Sale" -> dao.updateGoatStatus(gid, "Sold")
                     "Transfer" -> dao.updateGoatStatus(gid, "Transferred")
                 }
             }
@@ -288,6 +296,10 @@ private fun MainAppContent(
     fun deleteRecord(record: FarmRecord) {
         scope.launch {
             dao.deleteRecord(record)
+            // If deleting an individual goat sale, revert status to Active
+            if ((record.type == "Sale" || record.type == "Goat Sale") && record.goatId != null) {
+                dao.updateGoatStatus(record.goatId, "Active")
+            }
             syncManager.deleteRecordFromCloud(record.recordId)
         }
         editRecord = null
@@ -448,7 +460,7 @@ private fun MainAppContent(
                 NavigationBar {
                     listOf(
                         stringResource(R.string.dashboard) to Icons.Default.Home,
-                        stringResource(R.string.herd) to Icons.Default.Pets,
+                        stringResource(R.string.herd) to Icons.Default.Agriculture,
                         stringResource(R.string.records) to Icons.AutoMirrored.Filled.List,
                         stringResource(R.string.reports) to Icons.Default.Assessment
                     ).forEachIndexed { i, item ->
@@ -488,7 +500,7 @@ private fun MainAppContent(
                     onEditRecord = { editRecord = it }
                 )
             } ?: when (tab) {
-                0 -> Dashboard(goats, records, onOpen = { openGoat(it) })
+                0 -> Dashboard(goats, records, currencySymbol, onOpen = { openGoat(it) })
                 1 -> Herd(
                     goats = goats,
                     query = herdQuery,
@@ -510,6 +522,11 @@ private fun MainAppContent(
                     onHealthFilterChange = { healthFilterType = it },
                     safetyFilter = safetyFilterType,
                     onSafetyFilterChange = { safetyFilterType = it },
+                    salesFilter = salesFilterType,
+                    onSalesFilterChange = { salesFilterType = it },
+                    salesTimeFilter = salesTimeFilter,
+                    onSalesTimeFilterChange = { salesTimeFilter = it },
+                    currencySymbol = currencySymbol,
                     onAdd = { openAddRecord(it) },
                     onEdit = { editRecord = it },
                     onOpen = { id, t -> openGoat(id, t) }
@@ -546,6 +563,13 @@ private fun MainAppContent(
             onDismiss = { editGoat = null },
             onSave = { updatedGoat ->
                 scope.launch {
+                    // Handle automatic sale record deletion if status changed from Sold to Active
+                    if (goat.status == "Sold" && updatedGoat.status == "Active") {
+                        val saleRecords = dao.findRecordsByTypeForGoat(goat.id, "Goat Sale") + dao.findRecordsByTypeForGoat(goat.id, "Sale")
+                        saleRecords.forEach { syncManager.deleteRecordFromCloud(it.recordId) }
+                        dao.deleteRecordsByTypeForGoat(goat.id, "Goat Sale")
+                        dao.deleteRecordsByTypeForGoat(goat.id, "Sale")
+                    }
                     // The cloud document identity is stable, so a Goat ID rename is an update,
                     // not a delete + create. This prevents 0001 and 0002 from co-existing.
                     if (updatedGoat.id != goat.id) {
@@ -568,6 +592,7 @@ private fun MainAppContent(
             allRecords = records,
             initialGoatId = recordGoatId,
             existing = null,
+            currencySymbol = currencySymbol,
             onDismiss = {
                 addRecordType = null
                 recordGoatId = null
@@ -583,6 +608,7 @@ private fun MainAppContent(
             allRecords = records,
             initialGoatId = record.goatId,
             existing = record,
+            currencySymbol = currencySymbol,
             onDismiss = { editRecord = null },
             onSave = ::saveRecord,
             onDelete = { deleteRecord(it) }

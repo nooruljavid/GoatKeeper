@@ -26,7 +26,7 @@ import androidx.compose.ui.res.stringResource
 import com.goatkeeper.app.R
 
 @Composable
-fun Dashboard(goats: List<Goat>, records: List<FarmRecord>, onOpen: (String) -> Unit) {
+fun Dashboard(goats: List<Goat>, records: List<FarmRecord>, currencySymbol: String = "₹", onOpen: (String) -> Unit) {
     val activeCount = goats.count { it.status == "Active" }
     val femaleCount = goats.count { it.status == "Active" && it.gender == "Female" && !isKid(it.dateOfBirth) }
     val maleCount = goats.count { it.status == "Active" && it.gender == "Male" && !isKid(it.dateOfBirth) }
